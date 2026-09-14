@@ -1,31 +1,19 @@
 # ============================================
-# MÓDULOS DE NODE.JS
+# Frontend .gitignore (reglas específicas)
+# El .gitignore raíz ya cubre node_modules/, .env, dist/, etc.
 # ============================================
-node_modules/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
 
 # ============================================
-# ARCHIVOS COMPILADOS / DE SALIDA
+# VITE / TYPESCRIPT
 # ============================================
-dist/
-build/
+.vite/
 *.tsbuildinfo
 *.js.map
 *.d.ts
 *.d.ts.map
-!vite-env.d.ts 
+!vite-env.d.ts
 
 # ============================================
-# ENTORNO Y CONFIGURACIÓN LOCAL
+# VERCEL
 # ============================================
-.env
-.env.local
-.env.*.local
-
-# ============================================
-# EDITORES
-# ============================================
-.vscode/
-.idea/
+.vercel/

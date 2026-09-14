@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Tests use a separate PostgreSQL database on the same Docker server
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://castant:castant@localhost:5432/castant_test';
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://{{PROJECT_NAME}}:{{PROJECT_NAME}}@localhost:5432/{{PROJECT_NAME}}_test';
 process.env.JWT_SECRET = 'test-secret';
 
 export default defineConfig({

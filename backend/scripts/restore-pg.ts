@@ -22,9 +22,9 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 const backupsDir = path.join(projectRoot, 'prisma', 'backups');
 
-const DB_CONTAINER = process.env.DB_CONTAINER || 'castant-db';
-const DB_USER = process.env.DB_USER || 'castant';
-const DB_NAME = process.env.DB_NAME || 'castant';
+const DB_CONTAINER = process.env.DB_CONTAINER || '{{PROJECT_NAME}}-db';
+const DB_USER = process.env.DB_USER || '{{PROJECT_NAME}}';
+const DB_NAME = process.env.DB_NAME || '{{PROJECT_NAME}}';
 
 // Determine which backup to restore
 const argFile = process.argv[2];

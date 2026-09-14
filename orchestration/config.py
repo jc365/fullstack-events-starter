@@ -11,12 +11,12 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-BACKEND_URL = os.getenv("CASTANT_BACKEND_URL", "http://localhost:3000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3000")
 BACKEND_API = f"{BACKEND_URL}/api/v1"
 SEND_TOKEN = os.getenv("SEND_TOKEN", "")
 
 UPLOADS_DIR = Path(os.getenv(
-    "CASTANT_UPLOADS_DIR",
+    "UPLOADS_DIR",
     str(Path(__file__).resolve().parent.parent / "backend" / "uploads" / "videos"),
 ))
 
@@ -32,6 +32,6 @@ SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
-EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@castant.local")
+EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@example.com")
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

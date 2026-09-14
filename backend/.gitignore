@@ -1,19 +1,13 @@
-.env
+# ============================================
+# Backend .gitignore (reglas específicas)
+# El .gitignore raíz ya cubre node_modules/, .env, etc.
+# ============================================
 
 # ============================================
-# MÓDULOS DE NODE.JS
-# ============================================
-node_modules/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# ============================================
-# ARCHIVOS COMPILADOS / DE SALIDA
+# ARCHIVOS COMPILADOS / PRISMA GENERADO
 # ============================================
 dist/
 build/
-*.js
 *.js.map
 *.d.ts
 *.d.ts.map
@@ -21,18 +15,7 @@ build/
 /src/generated/prisma
 
 # ============================================
-# BASE DE DATOS Y BACKUPS
+# BACKUPS ESPECÍFICOS DE PRISMA
 # ============================================
-*.db
-*.sqlite
-*.sqlite3
-prisma/backups/
 prisma/**/*.sql
-# prisma/migrations/*.sql  --cubierto por la linea anterior
 !prisma/migrations/migration_lock.toml
-
-# ============================================
-# LOGS
-# ============================================
-*.log
-logs/

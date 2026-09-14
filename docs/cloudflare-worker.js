@@ -1,6 +1,6 @@
 // Cloudflare Worker - Ping a Render + R2 Monitor
-const BACKEND_URL = 'https://castant-backend.onrender.com';
-const ORCHESTRATOR_URL = 'https://castant-orchestrator.onrender.com';
+const BACKEND_URL = 'https://tu-backend.onrender.com';
+const ORCHESTRATOR_URL = 'https://tu-orchestrator.onrender.com';
 
 // 🔥 Variables de entorno (solo configuración del worker)
 const ENV = {

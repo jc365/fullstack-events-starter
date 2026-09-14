@@ -1,4 +1,9 @@
 # ============================================
+# ROOT .gitignore — Global rules
+# Subdirectorios solo añaden reglas específicas
+# ============================================
+
+# ============================================
 # ARCHIVOS DEL SISTEMA OPERATIVO
 # ============================================
 .DS_Store
@@ -14,13 +19,22 @@ desktop.ini
 *.swo
 
 # ============================================
-# DEPENDENCIAS GLOBALES (si las hay)
+# DEPENDENCIAS
 # ============================================
 node_modules/
 
 # ============================================
-# COBERTURA DE TESTS
+# VARIABLES DE ENTORNO
 # ============================================
+.env
+.env.local
+.env.*.local
+
+# ============================================
+# ARCHIVOS COMPILADOS / DE SALIDA
+# ============================================
+dist/
+build/
 coverage/
 .nyc_output/
 
@@ -33,13 +47,31 @@ temp/
 *.old
 
 # ============================================
-# VARIABLES DE ENTORNO
+# PYTHON
 # ============================================
-.env
-.env.local
-.env.*.local
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+venv/
 
 # ============================================
-# Docu +/- personal
+# BASE DE DATOS Y BACKUPS
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+prisma/backups/
+*.sql
+uploads/
+
+# ============================================
+# LOGS
+# ============================================
+*.log
+logs/
+
+# ============================================
+# DOCU PERSONAL no versionable
 # ============================================
 docs/no_GIT/

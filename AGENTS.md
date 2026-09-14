@@ -1,4 +1,4 @@
-# AGENTS.md — Castant
+# AGENTS.md — {{PROJECT_NAME}}
 
 ## Stack
 
@@ -13,19 +13,12 @@
 - Testing: Vitest 4 (backend root), Vitest + React Testing Library (frontend), Playwright (E2E)
 - DB: PostgreSQL via Docker (dev), SQLite `backend/test.db` (tests)
 
-## Project Status
-
-- **Backend:** ✅ 198/198 tests passing
-- **Frontend:** ✅ 18/18 tests passing
-- **E2E:** ✅ 13/13 tests passing
-- **Desktop:** ✅ Functional (Login, Dashboard, Casting Detail, Video Player, Export)
-
 ## Rules (Always Apply)
 
 1. **Never modify imports** — no `.js` extensions on import paths.
 2. **Backup AGENTS.md** before editing → `docu/saves-agents/AGENTS_<YYYYMMDD_HHMMSS>.md`.
-3. **IDs are flat strings** with prefixes (e.g. `user-...`). No `TypedId`.
-4. **Director is a `Participant`** with `role: 'director'`.
+3. **IDs are flat strings** with prefixes (e.g. `user-...`, `item-...`). No `TypedId`.
+4. **Members have roles** — `admin`, `user`, `guest`. One entity, role-based permissions.
 
 ## Commands
 
@@ -86,7 +79,7 @@ npm run db:restore      # Restore PostgreSQL backup
 npm run db:migrate      # Run Prisma migrations
 npm run db:studio       # Open Prisma Studio
 
-# Dev with all services (DB + Backend + Frontend + OpenCode + Orchestrator)
+# Dev with all services (DB + Backend + Frontend + Orchestrator)
 npm run dev:all
 ```
 
@@ -120,9 +113,7 @@ npm run dev:all
 ## Seed Data
 
 - Script: `backend/prisma/seed.ts` (configured as Prisma seed hook)
-- Users: `director@demo.com`, `actor1@demo.com`, `actor2@demo.com`, `preselector@demo.com` (password: `changeme`)
-- Demo casting with 2 rounds, participants, 2 submissions
-- Config entries: logging, feature_flags, limits, integrations, ui (9 entries)
+- Config entries: logging, feature_flags, limits, integrations, ui
 - Uses `upsert` to avoid duplicates
 
 ## Gotchas
@@ -141,30 +132,22 @@ Tests use `backend/test.db`. Configured in `vitest.config.ts` (sets `process.env
 
 **Security:**
 - `auth.ts` throws if `JWT_SECRET` is missing (no fallback)
-- `console.log(authHeader)` removed — never log tokens
 - `.env`, `.env.local`, `.env.*.local` are in `.gitignore`
-- **M1:** Request body logging removed from pino-http serializer (`index.ts:76`)
-- **M2:** Production guard: `NODE_ENV=production` + `DEMO_MODE=true` throws error at startup
-- **H3:** Strong 128-char hex JWT_SECRET in `.env`
-- **H4:** CORS configurable via `CORS_ORIGIN` env var (comma-separated)
-- **H5:** Helmet enabled with HSTS in production
-- **H6:** Rate limiting: login 10 req/15min, API 100 req/15min
-- **H7:** Service tokens via `ADMIT_TOKENS` env var (comma-separated). Tokens in the list bypass JWT validation and get `req.user = { id: 'service', role: 'service' }`. Used by the orchestration server.
+- Request body logging removed from pino-http serializer
+- Production guard: `NODE_ENV=production` + `DEMO_MODE=true` throws error at startup
+- Strong 128-char hex JWT_SECRET in `.env`
+- CORS configurable via `CORS_ORIGIN` env var (comma-separated)
+- Helmet enabled with HSTS in production
+- Rate limiting: login 10 req/15min, API 100 req/15min
+- Service tokens via `ADMIT_TOKENS` env var (comma-separated). Tokens bypass JWT validation.
 
-**Video upload:**
-- Multer config: `infrastructure/storage/videoUpload.ts` (memoryStorage)
-- Storage: Cloudflare R2 (production) or local `backend/uploads/videos/` (fallback)
-- R2 key stored in `Submission.videoKey` (e.g. `castant/videos/video-123.mp4`)
-- Presigned URLs generated on-demand via `GET /videos/:submissionId/url` (2h expiry)
-- `backend/uploads/videos/.gitignore` keeps the directory in git but ignores uploaded videos
+**File upload:**
+- Multer config: `infrastructure/storage/fileUpload.ts` (memoryStorage)
+- Storage: Cloudflare R2 (production) or local `backend/uploads/` (fallback)
+- R2 key stored in DB record (e.g. `items/files/file-123.mp4`)
+- Presigned URLs generated on-demand (2h expiry)
+- `backend/uploads/.gitignore` keeps the directory in git but ignores uploaded files
 - Static middleware in `index.ts` serves `/uploads`
-- MIME types: MP4, WebM, OGG, MOV, AVI, MKV; max 100MB
-
-**Presigned URL strategy:**
-- `videoKey` in DB is the stable reference (never expires)
-- `videoUrl` in DB stores the original URL (presigned at upload time, or external URL)
-- Frontend uses `useVideoUrls` hook to resolve keys → fresh presigned URLs
-- On 403 error, hook regenerates all URLs for the page
 
 ## Configuración de Logs
 
@@ -172,7 +155,7 @@ Tests use `backend/test.db`. Configured in `vitest.config.ts` (sets `process.env
 
 Controla el nivel de logs en todos los componentes del sistema:
 
-| Nivel | Backend (pino) | Orquestador (Python) | Frontend (console) |
+| Nivel | Backend (pino) | Orchestrator (Python) | Frontend (console) |
 |-------|----------------|----------------------|-------------------|
 | `debug` | ✅ | ✅ | ✅ |
 | `info` | ✅ | ✅ | ✅ |
@@ -183,27 +166,9 @@ Controla el nivel de logs en todos los componentes del sistema:
 
 - Todos los logs de la aplicación y HTTP se controlan con este único nivel
 - Cambios en `logging.level` se aplican en caliente (sin reiniciar) en los tres componentes
-- Los logs de cambio de configuración (`🔄 [Config] Log level changed`) siempre son visibles
+- Los logs de cambio de configuración siempre son visibles
 
-**Ejemplo:**
-
-```bash
-# Cambiar a modo debug para depuración
-PATCH /api/v1/config/logging.level
-{ "value": "debug" }
-```
-
-### Logs de cambio de configuración
-
-Los logs de cambio de nivel (`🔄 [Config] Log level changed`) siempre son visibles, independientemente del nivel configurado:
-
-- **Backend:** `console.log()`
-- **Orquestador:** `logger.info()` (siempre visible)
-- **Frontend:** `console.log()`
-
-Esto garantiza que el administrador siempre vea los cambios de configuración, incluso si el nivel de logs es `warn` o `error`.
-
-## Orchestration Server
+## Orchestrator
 
 Python/FastAPI service for event-driven workflows. Runs on port `8080`.
 
@@ -216,15 +181,15 @@ python -m orchestration.main
 ```
 
 **Webhooks (POST):**
-- `/webhook/submission.created` → VideoProcessorWorkflow (thumbnail + metadata via ffprobe/ffmpeg, PATCH to backend)
-- `/webhook/review.completed` → NotificationWorkflow (email to actor with score/feedback)
-- `/webhook/cleanup.daily` → CleanupWorkflow (delete videos older than N days)
+- `/webhook/item.created` → FileProcessorWorkflow (thumbnail + metadata via ffprobe/ffmpeg)
+- `/webhook/review.completed` → NotificationWorkflow (email with score/feedback)
+- `/webhook/cleanup.daily` → CleanupWorkflow (delete files older than N days)
 
-**Service token auth:** Orchestration sends `SEND_TOKEN` in `Authorization: Bearer` header. Backend validates against `ADMIT_TOKENS` env var. No JWT required for service-to-service calls.
+**Service token auth:** Orchestrator sends `SEND_TOKEN` in `Authorization: Bearer` header. Backend validates against `ADMIT_TOKENS` env var. No JWT required for service-to-service calls.
 
-**Config:** `.env` in `orchestration/` (see `.env.example`). Uploads dir defaults to `backend/uploads/videos/`.
+**Config:** `.env` in `orchestration/` (see `.env.example`). Uploads dir defaults to `backend/uploads/`.
 
-**Backend integration:** `infrastructure/webhooks/webhookClient.ts` — fire-and-forget `dispatchEvent()` calls after submission creation and review completion.
+**Backend integration:** `infrastructure/webhooks/webhookClient.ts` — fire-and-forget `dispatchEvent()` calls.
 
 **Testing:**
 ```bash
@@ -247,30 +212,20 @@ PYTHONPATH=.. pytest tests/test_cleanup.py -v  # Run specific file
 
 **User password:** `User.create(name, email, hash, id?)`. Hash NEVER plaintext. `CreateUserUseCase` hashes. `LoginUseCase` compares via `HashService.compare()`.
 
-**LoginUseCase:** Supports demo via optional `xUserId` in `LoginInput`. Validates `DEMO_MODE=true`. Uses `DEMO_USERS` map: `{ director: 'director@demo.com', actor: 'actor1@demo.com', preselector: 'preselector@demo.com' }`.
-
-**Casting participants:** `CastingParticipantEntry` = `{ userId, role: 'director' | 'reviewer' }`. Casting-level participants have `castingId` set, `roundId` null.
-
-**Round participants:** `RoundParticipantEntry` = `{ id, role: 'actor' | 'preselector' }`. Round-level participants have `roundId` set, `castingId` null.
-
-**CreateCastingUseCase:** Auto-creates Round 1 with empty participants.
-
-**ManageRoundParticipantsUseCase:** `actors` and `preselectors` as separate lists. `createNewRound=true` marks submissions `selected`/`rejected` and creates new round.
-
-**ReviewSubmissionUseCase:** Allows re-evaluation (`pending→reviewed`, `reviewed→reviewed`). Blocks `selected`/`rejected`. Empty feedback → `Feedback.none()`.
+**Member roles:** `admin` (full access), `user` (standard access), `guest` (read-only). Stored as string in `Member.role`.
 
 **Repositories:** Prisma-based. `upsert` in `save()`. Private `toDomain()`. Params are plain strings.
 
 **Logging:** Use cases import from `requestContext` (not `logger`). Routes import `requestLogger` from `requestContext`.
 
-**Bitácora:** `BitacoraService` wraps errors silently (never blocks). Use cases call `log()` after operations. Actions: `create_user`, `create_casting`, `submit_video`, `review_submission`, `add_participants`, `create_round`.
+**Bitácora:** `BitacoraService` wraps errors silently (never blocks). Use cases call `log()` after operations.
 
 **Conventions:** 2 spaces, semicolons, single quotes, max 100 chars. `export default` for classes. JSDoc headers (`@file`, `@module`) on every file.
 
 ## Testing
 
 - Backend tests: `tests/unit/domain/value-objects/`, `tests/unit/domain/entities/`, `tests/unit/application/use-cases/`
-- Use cases in subdirs: `tests/unit/application/use-cases/rounds/`
+- Use cases in subdirs: `tests/unit/application/use-cases/<domain>/`
 - Frontend tests: `frontend/src/**/*.test.tsx` (co-located)
 - E2E tests: `frontend/tests/e2e/*.spec.ts`
 - Mocking: `import { vi } from 'vitest'`
@@ -295,32 +250,20 @@ Auth middleware applied inside `routes.ts` via `router.use(authMiddleware)` — 
 - `GET /health` → `{ status: 'ok' }` (outside versioned router)
 - `POST /api/v1/auth/login` → `{ email, password, xUserId? }` → `{ token, userId }`
 - `GET /api/v1/users` → list all users
-- `GET /api/v1/users/me/participations` → authenticated user's participations
+- `GET /api/v1/users/me` → authenticated user profile
 - `GET /api/v1/users/:id` → user or 404
 - `POST /api/v1/users` → create user `{ id?, name, email, password }`
 - `DELETE /api/v1/users/:id` → delete user or 404
-- `GET /api/v1/castings` → list castings with participants
-- `GET /api/v1/castings/:id` → casting with participants and rounds
-- `POST /api/v1/castings` → create casting `{ title, description, directorEmail, directorName }`
-- `PUT /api/v1/castings/:id` → update `{ title?, description? }`
-- `DELETE /api/v1/castings/:id` → delete with cascade
-- `GET /api/v1/rounds/:id` → round with participants and submissions
-- `GET /api/v1/rounds/:id/submissions` → list submissions
-- `PATCH /api/v1/rounds/:id` → update `{ number }`
-- `DELETE /api/v1/rounds/:id` → delete with cascade
-- `DELETE /api/v1/rounds/:roundId/participants/:userId` → remove participant (director only, returns `{ success, hadSubmissions }`)
-- `POST /api/v1/rounds/participants` → manage participants or create new round `{ roundId, actors, preselectors, createNewRound? }`
-- `POST /api/v1/submissions` → submit video (JSON `{ roundId, videoUrl }` or multipart with `video` field) — `actorId` from `req.user.id`
-- `GET /api/v1/submissions/:id` → submission by ID
-- `GET /api/v1/videos/:submissionId/url` → presigned URL for R2 video (2h expiry)
-- `DELETE /api/v1/submissions/:id` → delete submission
-- `PATCH /api/v1/submissions/:id/review` → review `{ score, feedback }` — `directorId` from `req.user.id`
-- `PATCH /api/v1/submissions/:id/metadata` → update metadata `{ duration }` — used by VideoPlayerModal
+- `GET /api/v1/items` → list items
+- `GET /api/v1/items/:id` → item by ID
+- `POST /api/v1/items` → create item `{ title, description, ... }`
+- `PUT /api/v1/items/:id` → update item
+- `DELETE /api/v1/items/:id` → delete item
 - `GET /api/v1/config` → list all configs
 - `GET /api/v1/config/category/:category` → list configs by category
 - `GET /api/v1/config/:key` → get config by key
 - `PUT /api/v1/config/:key` → upsert config `{ value, description?, category? }`
-- `PATCH /api/v1/config/:key` → partial update config `{ value?, description?, category? }`
+- `PATCH /api/v1/config/:key` → partial update config
 - `DELETE /api/v1/config/:key` → delete config
 
 ## API Versioning
@@ -340,15 +283,14 @@ Routes versioned by URL prefix (`/api/v1`, `/api/v2`). Each version independent.
 - `tailwind.config.js` references `var(--color-*)` (no hardcoded colors)
 - `ThemeContext` (`src/context/ThemeContext.tsx`): `ThemeProvider` + `useTheme()` hook
   - Returns: `{ theme, setTheme, toggleTheme, themes, getThemeLabel, getThemeClass }`
-  - `themes` is the array of `{ id, label, cssClass }` objects (not `allThemes`/`themeLabels`)
+  - `themes` is the array of `{ id, label, cssClass }` objects
   - Persisted in `localStorage('theme')`, detects system preference via `matchMedia`
 
 ### Layout
 
 - Collapsible sidebar (280px open / 64px closed), persisted in `localStorage('sidebar-collapsed')`
 - Theme selector in sidebar (dropdown when expanded, palette icon when collapsed)
-- Header shows user info only when authenticated AND not in demo mode; shows `Demo: {selectedRole}` badge in demo mode
-- `handleLogout` resets `demoEnabled` state
+- Header shows user info when authenticated
 
 ### Auth Flow
 
@@ -356,27 +298,24 @@ Routes versioned by URL prefix (`/api/v1`, `/api/v2`). Each version independent.
 - `Layout` renders `LoginForm` when `!localStorage.getItem('token')`, otherwise renders `<Outlet />`
 - Demo mode: sidebar toggle calls `POST /auth/login` with `{ xUserId: selectedRole }`, stores JWT
 - `UserContext` provides: `user`, `participations`, `refreshUser()`, `isAuthenticated`, role helpers
-- Polling: refreshes participations every 30s, pauses when tab hidden
+- Polling: refreshes data every 30s, pauses when tab hidden
 
 ### Components
 
-- **`SubmitVideoModal`** — Two tabs: File Upload (default, drag-and-drop, progress bar) and URL
-- **`VideoPlayerModal`** — YouTube/Vimeo/local detection, `< >` nav with counter, `<< >>` first/last with vertical divider, star review (⭐/☆), film strip border, captures video duration via `loadedmetadata`
-- **`CreateNextRoundModal`** — Score filter (1-5 stars), actor checkboxes, Select All/Deselect All, "Create empty round" option
-- **`AddParticipantsModal`** — Two textareas (actors, pre-selectors), email parsing
+- **`SubmitModal`** — Two tabs: File Upload (drag-and-drop, progress bar) and URL
+- **`PlayerModal`** — YouTube/Vimeo/local detection, navigation, star review
 - **`ConfirmDialog`** — Focus management, Escape key, danger-styled confirm
 - **`ToastProvider`** — `showSuccess/showError/showInfo`, auto-close 4s, bottom-right
 
 ### Frontend Utils
 
 - `utils/scoring.ts` — `scoreToStars(score: number): number` (0-10 → 0-5)
-- `utils/submissionStatus.ts` — `STATUS_STYLES`, `getStatusStyle()`, `SubmissionStatus` type
+- `utils/status.ts` — `STATUS_STYLES`, `getStatusStyle()`, `StatusType` type
 
 ### UserCacheContext
 
 - `getUser(id)` → `{ name, email }` from cache or null
 - `ensureUser(id)` → fetches from `GET /users/:id`, caches, deduplicates concurrent requests
-- Guards against falsy `id`
 
 ### E2E Testing (Playwright)
 
@@ -390,136 +329,50 @@ Routes versioned by URL prefix (`/api/v1`, `/api/v2`). Each version independent.
 ```
 frontend/src/
 ├── api/client.ts              ← Axios with JWT Bearer interceptor
-├── components/                ← Layout, LoginForm, SubmitVideoModal, VideoPlayerModal,
-│                                CreateNextRoundModal, AddParticipantsModal, ConfirmDialog
+├── components/                ← Layout, LoginForm, Modals, ConfirmDialog
 ├── context/                   ← UserContext, ThemeContext, ToastContext, UserCacheContext
-├── pages/                     ← Dashboard, Castings, CreateCasting, CastingDetail, RoundDetail
-├── utils/                     ← scoring.ts, submissionStatus.ts
+├── pages/                     ← Dashboard, Items, ItemDetail
+├── utils/                     ← scoring.ts, status.ts
 ├── App.tsx                    ← Routes + UserProvider + ThemeProvider
 └── index.css                  ← Tailwind + CSS custom properties
 ```
 
-## Desktop Client
-
-### Stack
-
-- Python 3.10+
-- CustomTkinter (modern UI)
-- requests (HTTP client)
-- pywebview (embedded video playback)
-
-### Structure
-
-```
-desktop/
-├── src/
-│   ├── main.py          # App entry point
-│   ├── api/
-│   │   └── client.py    # HTTP client with JWT auth
-│   ├── ui/
-│   │   ├── login.py     # Login window
-│   │   ├── dashboard.py # Dashboard with castings list
-│   │   ├── casting_detail.py  # Casting details with rounds
-│   │   ├── round_detail.py    # Round detail with submissions
-│   │   ├── video_player.py    # Video player with review (mpv)
-│   │   └── export_dialog.py   # Export dialog (ZIP, compression)
-│   ├── models/
-│   │   └── types.py     # Data classes
-│   └── utils/
-│       ├── config.py    # Configuration
-│       ├── paths.py     # Cross-platform paths (Downloads)
-│       ├── video_compressor.py  # ffmpeg compression
-│       └── zip_exporter.py      # ZIP export with manifest
-├── requirements.txt
-├── run.py               # Launcher script
-└── README.md
-```
-
-### Commands
-
-```bash
-# Install dependencies
-cd desktop && pip install -r requirements.txt
-
-# Run desktop app
-cd desktop && python3 run.py
-
-# Or from root
-cd desktop && python3 -m src.main
-
-# With venv (recommended)
-cd desktop && python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-python3 run.py
-```
-
-### Configuration
-
-- API URL: `CASTANT_API_URL` env var (default: `http://localhost:3000/api/v1`)
-- Theme: `dark` (default in config.py)
-
-### API Endpoints Used
-
-- `POST /api/v1/auth/login` — Login with email/password or demo mode
-- `GET /api/v1/castings` — List castings
-- `GET /api/v1/castings/:id` — Casting details with rounds
-- `GET /api/v1/rounds/:id` — Round with participants and submissions
-- `PATCH /api/v1/submissions/:id/review` — Submit review (score + feedback)
-
-### Features
-
-- Login with email/password or demo mode
-- Dashboard with castings list and role badges
-- Casting Detail (participants, rounds)
-- Round Detail (submissions, scores, export button)
-- Video Player with mpv (play, navigate, review)
-- Star-based scoring and feedback for directors
-- Video export: compression (ffmpeg, CRF 18/23/28), ZIP packaging, manifest.json
-- Export location: user's Downloads folder (cross-platform)
-
-### Testing
-
-- Framework: pytest
-- Unit tests: `desktop/tests/unit/`
-- Integration tests: `desktop/tests/integration/`
-- Run tests: `cd desktop && pytest`
-
 ## Deployment
 
-### Base de Datos
-- **Plataforma:** Neon.tech
-- **Tipo:** PostgreSQL serverless
-- **URL:** (no documentar la URL real)
+### Database
+- **Platform:** Neon.tech (PostgreSQL serverless)
 - **Plan:** Free Tier (0.5 GB)
-- **Región:** AWS US East 2 (Ohio)
 
 ### Backend
-- **Plataforma:** Render
-- **URL:** https://castant-backend.onrender.com
-- **Comando de inicio:** `npx tsx src/index.ts`
-- **Variables clave:** `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`
-- **Plan:** Starter (750h/mes)
+- **Platform:** Render
+- **Start command:** `npx tsx src/index.ts`
+- **Key env vars:** `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`
 
 ### Frontend
-- **Plataforma:** Vercel
-- **URL:** https://castant.vercel.app
+- **Platform:** Vercel
 - **Framework:** React + Vite
-- **Variables clave:** `VITE_API_URL=https://castant-backend.onrender.com/api/v1`
+- **Key env vars:** `VITE_API_URL=https://tu-backend.onrender.com/api/v1`
 
-### Orquestador (OpenClaw)
-- **Plataforma:** Render
-- **URL:** https://castant-orchestrator.onrender.com
-- **Comando de inicio:** `python -m uvicorn orchestration.webhooks.server:app --host 0.0.0.0 --port 10000`
-- **Variables clave:** `SEND_TOKEN`, `CASTANT_BACKEND_URL`
+### Orchestrator
+- **Platform:** Render
+- **Start command:** `python -m uvicorn orchestration.webhooks.server:app --host 0.0.0.0 --port 10000`
+- **Key env vars:** `SEND_TOKEN`, `BACKEND_URL`
 
 ### Cloudflare Worker (Ping)
-- **Plataforma:** Cloudflare Workers
-- **URL:** https://castant-ping.workers.dev
-- **Propósito:** Mantener el backend de Render activo (evitar el dormido)
-- **Cron:** `*/15 * * * *` (cada 15 minutos)
-- **Horario:** 16:00 - 20:00 (Lunes a Viernes)
-- **Variables:** `START_HOUR=16`, `END_HOUR=20`, `DAYS_ALLOWED=1-5`
-- **Código:** `docs/cloudflare-worker.js`
+- **Platform:** Cloudflare Workers
+- **Purpose:** Keep backend alive (prevent sleep)
+- **Schedule:** Every 15 minutes during business hours
+- **Code:** `docs/cloudflare-worker.js`
+
+## Estrategia de .gitignore
+
+- **Root `.gitignore`**: reglas globales (node_modules, .env, __pycache__, venv, dist, etc.)
+- **Subdirectorios**: solo reglas específicas de cada módulo (Vite en frontend, Prisma en backend, pytest en orchestration)
+- **No duplicar** reglas entre niveles
+- **`package-lock.json` NO se ignora** (debe versionarse tras el setup)
+- **`.opencode/skills/` SÍ se versiona** (útil para cualquier usuario)
+- **`.opencode/node_modules/` y `cache/` NO se versionan**
+- **`backend/uploads/.gitignore`** mantiene el directorio vacío en git pero ignora archivos subidos
 
 ## Plans Location
 
@@ -529,3 +382,52 @@ Plans are stored in `/.opencode/plans/<YYYYMMDD>_<nombre>.md`.
 
 Backup rule: Before editing, copy current file to `docu/saves-agents/AGENTS_<YYYYMMDD_HHMMSS>.md`.
 Purpose: Revert bad agent changes, track rule evolution, reference past decisions.
+
+## Customization Guide
+
+### How to rename the domain
+
+1. Run `./setup.sh your-project-name` to rename all references
+2. Update `AGENTS.md` header and references
+3. Update `README.md` title and description
+4. Update `docker-compose.yml` container and DB names
+5. Update `.env.example` files with new defaults
+
+### How to add a new model
+
+1. **Domain:** Create entity in `backend/src/domain/entities/YourModel.ts`
+2. **Value Objects:** Create in `backend/src/domain/value-objects/`
+3. **Repository:** Create in `backend/src/infrastructure/repositories/`
+4. **Use Cases:** Create in `backend/src/application/use-cases/`
+5. **Routes:** Add endpoints in `backend/src/infrastructure/api/v1/routes.ts`
+6. **Schema:** Update `backend/prisma/schema.prisma` with new model
+7. **Frontend:** Add page in `frontend/src/pages/YourModel.tsx`
+
+### How to add a new workflow
+
+1. Create file in `orchestration/workflows/your_workflow.py`
+2. Extend `BaseWorkflow` with `event_type` and `execute()`
+3. Register in `orchestration/main.py`
+4. Add webhook endpoint in `orchestration/webhooks/server.py`
+
+### How to add a new config key
+
+1. Use `PUT /api/v1/config/your.key` with `{ "value": "...", "category": "..." }`
+2. Access in backend: `ConfigRepository.get('your.key')`
+3. Access in orchestrator: `get_config('your.key')`
+4. Config categories: `logging`, `feature_flags`, `limits`, `integrations`, `ui`
+
+### How to customize member roles
+
+The starter uses three roles: `admin`, `user`, `guest`. To customize:
+
+1. Update `backend/src/domain/entities/Member.ts` — add/modify role enum
+2. Update `backend/src/application/use-cases/auth/` — adjust permission checks
+3. Update frontend role helpers in `UserContext`
+4. Document new roles in this file
+
+### How to add a new email provider
+
+1. Create provider class in `orchestration/utils/email_client.py`
+2. Add provider to `EmailClient.send_email()` switch
+3. Configure via `EMAIL_PROVIDER` env var (console, smtp, resend)
