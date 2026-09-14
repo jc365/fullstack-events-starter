@@ -85,6 +85,49 @@ npm run dev:all
 
 **Order:** `typecheck → test`
 
+## Typecheck
+
+```bash
+cd backend && npx tsc --noEmit
+```
+
+Estado actual: da errores pre-existentes (TS2835, TS7006, TS2349). Esto es deuda técnica aceptada:
+
+- El proyecto usa `tsx` como runtime, que resuelve imports sin extensión
+- `tsc` con `moduleResolution: node16` exige extensiones `.js` (TS2835)
+- Hay ~15 callbacks sin tipado explícito (TS7006)
+- El import de `pino-http` tiene un problema de tipos (TS2349)
+
+Los errores **NO** bloquean el desarrollo ni el runtime.
+
+### Cómo trabajar con ellos
+
+Al introducir código nuevo, verificar que no añades errores nuevos:
+
+```bash
+cd backend && npx tsc --noEmit 2>&1 | wc -l
+# Base actual: ~127 errores
+# Objetivo: ir reduciendo la deuda en cada iteración
+```
+
+### Plan de reducción (a futuro)
+
+1. **Fase A:** Arreglar TS7006 (~15 errores) — añadir tipos explícitos a callbacks
+2. **Fase B:** Evaluar `moduleResolution: bundler` (resuelve TS2835, requiere prueba con tsx y build)
+3. **Fase C:** Arreglar TS2349 (pino-http) — evaluar wrapper o alternativa
+
+### Root scripts (desde la raíz del monorepo)
+
+```bash
+npm run db:up        # Levantar PostgreSQL (Docker)
+npm run db:down      # Detener PostgreSQL
+npm run db:migrate   # Aplicar schema Prisma (db:push)
+npm run db:seed      # Insertar datos demo
+npm run db:studio    # Abrir Prisma Studio
+npm run db:backup    # Backup de PostgreSQL
+npm run db:restore   # Restaurar backup
+```
+
 ## DB Backups
 
 - Backups stored in `backend/prisma/backups/`

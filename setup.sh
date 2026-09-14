@@ -271,7 +271,7 @@ print_summary() {
 
   if ! $DRY_RUN; then
     echo "  Next steps:"
-    echo "    1. Copy .env.example to .env and fill in secrets"
+    echo "    1. Edit .env files with your real credentials (DATABASE_URL, JWT_SECRET, etc.)"
     echo "    2. npm install && cd backend && npm install && cd ../frontend && npm install"
     echo "    3. npm run db:up && npm run db:migrate && npm run db:seed"
     echo "    4. npm run dev:all"
@@ -294,6 +294,27 @@ main() {
   apply_replacements
   update_license
   rename_git_remote
+
+  # ── Copy .env.example → .env (if missing) ──────────────────────────────────
+  if ! $DRY_RUN; then
+    echo ""
+    echo "→ Copying .env.example to .env (if missing)..."
+
+    # backend
+    [ -f backend/.env.example ] && [ ! -f backend/.env ] && cp backend/.env.example backend/.env && echo "  ✓ backend/.env"
+
+    # frontend
+    [ -f frontend/.env.example ] && [ ! -f frontend/.env ] && cp frontend/.env.example frontend/.env && echo "  ✓ frontend/.env"
+
+    # orchestration
+    [ -f orchestration/.env.example ] && [ ! -f orchestration/.env ] && cp orchestration/.env.example orchestration/.env && echo "  ✓ orchestration/.env"
+
+    # tests/REST Client
+    [ -f "tests/REST Client/.env.example" ] && [ ! -f "tests/REST Client/.env" ] && cp "tests/REST Client/.env.example" "tests/REST Client/.env" && echo "  ✓ tests/REST Client/.env"
+
+    echo ""
+    echo "⚠ IMPORTANT: Edit the .env files with your real credentials (DATABASE_URL, JWT_SECRET, etc.)"
+  fi
 
   if ! $DRY_RUN; then
     echo "$PROJECT_NAME" > .setup_done

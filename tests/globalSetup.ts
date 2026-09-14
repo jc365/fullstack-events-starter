@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 export default async function globalSetup() {
-  const testDbUrl = process.env.DATABASE_URL || 'postgresql://{{PROJECT_NAME}}:{{PROJECT_NAME}}@localhost:5432/{{PROJECT_NAME}}_test';
+  const testDbUrl = process.env.DATABASE_URL || 'postgresql://{{PROJECT_NAME}}:{{PROJECT_NAME}}@localhost:5433/{{PROJECT_NAME}}_test';
 
   console.log('🔄 Configurando base de datos de tests:', testDbUrl);
 

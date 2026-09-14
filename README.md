@@ -20,19 +20,45 @@ Monorepo starter kit with Node/Express backend, React frontend, and Python orche
 ## Quick Start
 
 ```bash
-git clone https://github.com/tu-usuario/fullstack-events-starter.git my-project
-cd my-project
-./setup.sh my-project
+# 1. Clonar y personalizar
+git clone https://github.com/tu-usuario/fullstack-events-starter.git mi-proyecto
+cd mi-proyecto
+./setup.sh mi-proyecto
+
+# 2. Editar credenciales en .env
+#    - backend/.env (DATABASE_URL, JWT_SECRET)
+#    - frontend/.env (VITE_API_URL)
+#    - orchestration/.env (si aplica)
+#    - tests/REST Client/.env (URLs para pruebas manuales)
+
+# 3. Instalar dependencias
+npm install
+cd backend && npm install && cd ../frontend && npm install && cd ..
+
+# 4. Levantar PostgreSQL
+npm run db:up
+
+# 5. Aplicar schema y seed
+npm run db:migrate
+npm run db:seed
+
+# 6. Arrancar backend y frontend
+npm run dev:all
 ```
 
+Comandos útiles (desde la raíz):
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run db:up` | Levantar PostgreSQL (Docker) |
+| `npm run db:down` | Detener PostgreSQL |
+| `npm run db:migrate` | Aplicar schema Prisma |
+| `npm run db:seed` | Insertar datos demo |
+| `npm run db:studio` | Abrir Prisma Studio |
+| `npm run db:backup` | Backup de PostgreSQL |
+| `npm run db:restore` | Restaurar backup |
+
 > **Note on PostgreSQL port:** This starter uses port `5433` by default to avoid conflicts with other PostgreSQL instances (which commonly use `5432`). If you prefer `5432`, edit `docker-compose.yml` and `backend/.env`.
-
-The setup script will:
-
-1. Rename all project references to your chosen name
-2. Configure placeholders for author, domain, and admin email
-3. Update package.json files and docker-compose.yml
-4. Show a summary of all changes
 
 ## Project Structure
 
