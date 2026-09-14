@@ -44,8 +44,4 @@ export default interface IUserRepository {
   delete(id: string): Promise<void>;
 }
 
-/**
- * @deprecated Use IUserRepository instead. Will be removed in future versions.
- */
-export const IActorRepository = IUserRepository;
-export type IActorRepository = IUserRepository;
+

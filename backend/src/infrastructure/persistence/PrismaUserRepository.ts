@@ -4,6 +4,7 @@
  */
 
 import User from '../../domain/entities/User';
+import type { UserRole } from '../../domain/entities/User';
 import Email from '../../domain/value-objects/Email';
 import FullName from '../../domain/value-objects/FullName';
 import type IUserRepository from '../../application/interfaces/IUserRepository';
@@ -39,11 +40,13 @@ export default class PrismaUserRepository implements IUserRepository {
         name: user.name.getValue(),
         email: user.email.getValue(),
         password: user.password,
+        role: user.role,
       },
       update: {
         name: user.name.getValue(),
         email: user.email.getValue(),
         password: user.password,
+        role: user.role,
       },
     });
   }
@@ -54,15 +57,9 @@ export default class PrismaUserRepository implements IUserRepository {
     });
   }
 
-  private toDomain(record: { id: string; name: string; email: string; password: string }): User {
+  private toDomain(record: { id: string; name: string; email: string; password: string; role: string }): User {
     const userName = FullName.create(record.name);
     const userEmail = Email.create(record.email);
-    return User.create(userName, userEmail, record.password, record.id);
+    return User.create(userName, userEmail, record.password, record.id, record.role as UserRole);
   }
 }
-
-/**
- * @deprecated Use PrismaUserRepository instead. Will be removed in future versions.
- */
-export const PrismaActorRepository = PrismaUserRepository;
-export type PrismaActorRepository = PrismaUserRepository;

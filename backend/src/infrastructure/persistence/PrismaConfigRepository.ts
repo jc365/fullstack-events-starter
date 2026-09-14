@@ -29,13 +29,15 @@ export default class PrismaConfigRepository implements IConfigRepository {
       where: { key: config.key },
       create: {
         key: config.key,
-        value: config.value as object,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        value: config.value as any,
         description: config.description,
         category: config.category,
         updatedBy: config.updatedBy,
       },
       update: {
-        value: config.value as object,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        value: config.value as any,
         description: config.description,
         category: config.category,
         updatedBy: config.updatedBy,
@@ -50,7 +52,7 @@ export default class PrismaConfigRepository implements IConfigRepository {
   private toDomain(record: {
     id: string;
     key: string;
-    value: object;
+    value: unknown;
     description: string | null;
     category: string | null;
     updatedBy: string | null;

@@ -25,6 +25,8 @@ cd my-project
 ./setup.sh my-project
 ```
 
+> **Note on PostgreSQL port:** This starter uses port `5433` by default to avoid conflicts with other PostgreSQL instances (which commonly use `5432`). If you prefer `5432`, edit `docker-compose.yml` and `backend/.env`.
+
 The setup script will:
 
 1. Rename all project references to your chosen name

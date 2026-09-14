@@ -7,9 +7,9 @@ services:
       POSTGRES_PASSWORD: {{PROJECT_NAME}}
       POSTGRES_DB: {{PROJECT_NAME}}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - {{PROJECT_NAME}}_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U {{PROJECT_NAME}}"]
       interval: 5s
@@ -17,4 +17,4 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
+  {{PROJECT_NAME}}_data:

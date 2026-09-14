@@ -6,10 +6,10 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
+if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
+const JWT_SECRET: string = process.env.JWT_SECRET;
 
 const SERVICE_TOKENS = new Set(
   (process.env.ADMIT_TOKENS || '')
@@ -21,6 +21,7 @@ const SERVICE_TOKENS = new Set(
 export interface AuthRequest extends Request {
   user?: {
     id: string;
+    role?: string;
   };
 }
 
@@ -40,7 +41,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as unknown as { userId: string };
     req.user = { id: decoded.userId };
     next();
   } catch {

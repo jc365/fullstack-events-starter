@@ -9,19 +9,21 @@ import genUUID from '../utils/genUUID';
 import Email from '../value-objects/Email';
 import FullName from '../value-objects/FullName';
 
+export type UserRole = 'admin' | 'user' | 'guest';
+
 export class User {
   private readonly _id: string;
   private readonly _name: FullName;
   private readonly _email: Email;
   private readonly _password: string;
-  private readonly _submissions: any[];
+  private readonly _role: UserRole;
 
-  private constructor(id: string, name: FullName, email: Email, password: string, submissions: any[]) {
+  private constructor(id: string, name: FullName, email: Email, password: string, role: UserRole) {
     this._id = id;
     this._name = name;
     this._email = email;
     this._password = password;
-    this._submissions = submissions;
+    this._role = role;
   }
 
   /**
@@ -30,53 +32,33 @@ export class User {
    * @param {Email} email - Email address of the User.
    * @param {string} password - Hashed password of the User.
    * @param {string} [id] - Optional unique identifier for the User.
+   * @param {UserRole} [role] - Optional role (default: 'user').
    * @returns {User} - A new instance of User.
    */
-  static create(name: FullName, email: Email, password: string, id?: string): User {
+  static create(name: FullName, email: Email, password: string, id?: string, role: UserRole = 'user'): User {
     const finalId = id || genUUID('usr');
-    return new User(finalId, name, email, password, []);
+    return new User(finalId, name, email, password, role);
   }
 
-  /**
-   * @returns {string} - User's unique identifier.
-   */
   get id(): string {
     return this._id;
   }
 
-  /**
-   * @returns {string} - User's name.
-   */
   get name(): FullName {
     return this._name;
   }
 
-  /**
-   * @returns {Email} - User's email address.
-   */
   get email(): Email {
     return this._email;
   }
 
-  /**
-   * @returns {string} - User's hashed password.
-   */
   get password(): string {
     return this._password;
   }
 
-  /**
-   * @returns {any[]} - Array of submissions (temporal).
-   */
-  get submissions(): any[] {
-    return this._submissions;
+  get role(): UserRole {
+    return this._role;
   }
 }
 
 export default User;
-
-/**
- * @deprecated Use User instead. Will be removed in future versions.
- */
-export const Actor = User;
-export type Actor = User;

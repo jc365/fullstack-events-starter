@@ -26,7 +26,7 @@ export class DeleteConfigUseCase {
     await this.bitacoraService.log({
       userId: deletedBy || 'system',
       action: 'delete_config',
-      details: { key },
+      metadata: { key },
     });
 
     logger.info({ key }, 'DeleteConfigUseCase: completed');

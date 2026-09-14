@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 const LOCAL_UPLOADS_DIR = path.resolve(__dirname, '../../../uploads/videos');
 const R2_BUCKET = process.env.CLOUDFLARE_R2_BUCKET;
-const R2_FOLDER = process.env.CLOUDFLARE_R2_TARGET_FOLDER || 'castant/videos';
+const R2_FOLDER = process.env.CLOUDFLARE_R2_TARGET_FOLDER || 'uploads/files';
 const PRESIGNED_URL_EXPIRY = 3600; // 1 hour
 
 export function isR2Configured(): boolean {

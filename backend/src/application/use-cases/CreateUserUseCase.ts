@@ -41,16 +41,10 @@ export class CreateUserUseCase {
     await this.bitacoraService.log({
       userId: user.id,
       action: 'create_user',
-      details: { email, name },
+      metadata: { email, name },
     });
 
     logger.info({ userId: user.id }, 'CreateUserUseCase: completed');
     return user;
   }
 }
-
-/**
- * @deprecated Use CreateUserUseCase instead. Will be removed in future versions.
- */
-export const CreateActorUseCase = CreateUserUseCase;
-export type CreateActorUseCase = CreateUserUseCase;

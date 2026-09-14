@@ -9,84 +9,46 @@ datasource db {
 }
 
 model User {
-  id           String        @id
-  name         String
-  email        String        @unique
-  password     String
-  submissions  Submission[]
-  participants Participant[]
-  bitacora     Bitacora[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id        String      @id
+  name      String
+  email     String      @unique
+  password  String
+  role      String      @default("user") // admin | user | guest
+  items     Item[]
+  bitacora  Bitacora[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
-model Casting {
-  id           String        @id
-  title        String
-  description  String
-  participants Participant[]
-  rounds       Round[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-}
+model Item {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  status      String   @default("active") // active | archived
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
 
-model Participant {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  castingId String?
-  casting   Casting? @relation(fields: [castingId], references: [id])
-  roundId   String?
-  round     Round?   @relation(fields: [roundId], references: [id])
-  role      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
-model Round {
-  id          String       @id
-  number      Int
-  castingId   String
-  status      String       @default("active") // "active" | "passed"
-  casting     Casting      @relation(fields: [castingId], references: [id])
-  participants Participant[]
-  submissions Submission[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-}
-
-model Submission {
-  id        String   @id
-  actorId   String
-  roundId   String
-  videoUrl  String
-  videoKey  String?  // R2 key (e.g. castant/videos/video-123.mp4). Null for external URLs.
-  duration  Int?
-  status    String   @default("pending")
-  score     Int      @default(0)
-  feedback  String   @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  actor User   @relation(fields: [actorId], references: [id])
-  round Round @relation(fields: [roundId], references: [id])
+  @@index([createdBy])
+  @@index([status])
 }
 
 model Bitacora {
-  id           String   @id @default(cuid())
-  timestamp    DateTime @default(now())
-  userId       String
-  action       String
-  details      Json?
-  castingId    String?
-  roundId      String?
-  submissionId String?
+  id         String   @id @default(uuid())
+  action     String
+  userId     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
-  @@index([action])
-  @@index([timestamp])
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 model EventQueue {

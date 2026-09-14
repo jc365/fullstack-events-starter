@@ -7,18 +7,17 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { CreateUserUseCase } from '../../../application/use-cases/CreateUserUseCase';
 import { GetAllUsersUseCase } from '../../../application/use-cases/GetAllUsersUseCase';
-import { CreateCastingUseCase } from '../../../application/use-cases/CreateCastingUseCase';
-import { SubmitVideoUseCase } from '../../../application/use-cases/SubmitVideoUseCase';
-import { ManageRoundParticipantsUseCase } from '../../../application/use-cases/rounds/ManageRoundParticipantsUseCase';
-import { ReviewSubmissionUseCase } from '../../../application/use-cases/submissions/ReviewSubmissionUseCase';
 import { LoginUseCase } from '../../../application/use-cases/LoginUseCase';
+import CreateItemUseCase from '../../../application/use-cases/items/CreateItemUseCase';
+import GetItemUseCase from '../../../application/use-cases/items/GetItemUseCase';
+import ListItemsUseCase from '../../../application/use-cases/items/ListItemsUseCase';
+import UpdateItemUseCase from '../../../application/use-cases/items/UpdateItemUseCase';
+import DeleteItemUseCase from '../../../application/use-cases/items/DeleteItemUseCase';
 import { GetConfigUseCase, GetAllConfigUseCase, GetConfigByCategoryUseCase } from '../../../application/use-cases/config/GetConfigUseCase';
 import { UpsertConfigUseCase } from '../../../application/use-cases/config/UpsertConfigUseCase';
 import { DeleteConfigUseCase } from '../../../application/use-cases/config/DeleteConfigUseCase';
 import PrismaUserRepository from '../../persistence/PrismaUserRepository';
-import PrismaCastingRepository from '../../persistence/PrismaCastingRepository';
-import PrismaRoundRepository from '../../persistence/PrismaRoundRepository';
-import PrismaSubmissionRepository from '../../persistence/PrismaSubmissionRepository';
+import PrismaItemRepository from '../../persistence/PrismaItemRepository';
 import PrismaBitacoraRepository from '../../persistence/PrismaBitacoraRepository';
 import PrismaConfigRepository from '../../persistence/PrismaConfigRepository';
 import BitacoraService from '../../logging/BitacoraService';
@@ -27,10 +26,8 @@ import requestLogger from '../../logging/requestContext';
 import { authMiddleware } from '../../middleware/auth';
 import type { AuthRequest } from '../../middleware/auth';
 import prisma from '../../persistence/prismaClient';
-import videoUpload from '../../storage/videoUpload';
-import { uploadFile, isR2Configured, getFileUrlAsync } from '../../storage/storageService';
-import path from 'path';
-import { dispatchEvent } from '../../webhooks/webhookClient';
+import demoFileUpload from '../../storage/demoFileUpload';
+import { isR2Configured, getFileUrlAsync } from '../../storage/storageService';
 
 const LOG_LEVEL_NORMALIZE: Record<string, string> = {
   'warning': 'warn',
@@ -59,15 +56,12 @@ const createUserUseCase = new CreateUserUseCase(userRepository, bitacoraService,
 const getAllUsersUseCase = new GetAllUsersUseCase(userRepository);
 const loginUseCase = new LoginUseCase(userRepository, hashService);
 
-const castingRepository = new PrismaCastingRepository();
-const roundRepository = new PrismaRoundRepository();
-const createCastingUseCase = new CreateCastingUseCase(castingRepository, userRepository, roundRepository, bitacoraService, hashService);
-
-const submissionRepository = new PrismaSubmissionRepository();
-const submitVideoUseCase = new SubmitVideoUseCase(userRepository, roundRepository, submissionRepository, bitacoraService);
-
-const manageParticipantsUseCase = new ManageRoundParticipantsUseCase(userRepository, roundRepository, submissionRepository, bitacoraService, hashService);
-const reviewSubmissionUseCase = new ReviewSubmissionUseCase(submissionRepository, roundRepository, castingRepository, bitacoraService);
+const itemRepository = new PrismaItemRepository();
+const createItemUseCase = new CreateItemUseCase(itemRepository, bitacoraService);
+const getItemUseCase = new GetItemUseCase(itemRepository);
+const listItemsUseCase = new ListItemsUseCase(itemRepository);
+const updateItemUseCase = new UpdateItemUseCase(itemRepository, bitacoraService);
+const deleteItemUseCase = new DeleteItemUseCase(itemRepository, bitacoraService);
 
 const configRepository = new PrismaConfigRepository();
 const getConfigUseCase = new GetConfigUseCase(configRepository);
@@ -81,22 +75,22 @@ const deleteConfigUseCase = new DeleteConfigUseCase(configRepository, bitacoraSe
 // ============================================
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // tiempo de espera para reset: 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 10 : 100,    // 100 en desarrollo
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 10 : 100,
   message: { error: 'Too many login attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 500, // ← 500 en desarrollo
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 500,
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 // ============================================
-// Rutas públicas (sin autenticación)
+// Public routes (no auth)
 // ============================================
 
 router.post('/auth/login', loginLimiter, async (req, res) => {
@@ -114,11 +108,13 @@ router.post('/auth/login', loginLimiter, async (req, res) => {
 });
 
 // ============================================
-// Rutas protegidas (requieren autenticación)
+// Protected routes (auth required)
 // ============================================
 
 router.use(authMiddleware);
 router.use(apiLimiter);
+
+// ── Users ───────────────────────────────────
 
 router.get('/users', async (_req, res) => {
   requestLogger.info({}, 'GET /users');
@@ -129,6 +125,7 @@ router.get('/users', async (_req, res) => {
       id: u.id,
       name: u.name.getValue(),
       email: u.email.getValue(),
+      role: u.role,
     })));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
@@ -137,53 +134,25 @@ router.get('/users', async (_req, res) => {
   }
 });
 
-router.get('/users/me/participations', async (req: AuthRequest, res) => {
+router.get('/users/me', async (req: AuthRequest, res) => {
   const userId = req.user?.id;
-  requestLogger.info({ userId }, 'GET /users/me/participations');
+  requestLogger.info({ userId }, 'GET /users/me');
 
   try {
-    const participations = await prisma.participant.findMany({
-      where: { userId },
-      include: {
-        casting: { select: { id: true, title: true, description: true } },
-        round: {
-          select: {
-            id: true,
-            number: true,
-            castingId: true,
-            casting: { select: { id: true, title: true } },
-          },
-        },
-      },
+    const user = await userRepository.findById(userId || '');
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    res.json({
+      id: user.id,
+      name: user.name.getValue(),
+      email: user.email.getValue(),
+      role: user.role,
     });
-
-    const result = participations.map((p) => {
-      if (p.castingId && p.casting) {
-        return {
-          type: 'casting' as const,
-          castingId: p.casting.id,
-          castingTitle: p.casting.title,
-          castingDescription: p.casting.description,
-          role: p.role,
-        };
-      }
-      if (p.roundId && p.round) {
-        return {
-          type: 'round' as const,
-          roundId: p.round.id,
-          roundNumber: p.round.number,
-          castingId: p.round.castingId,
-          castingTitle: p.round.casting?.title ?? '',
-          role: p.role,
-        };
-      }
-      return null;
-    }).filter(Boolean);
-
-    res.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message }, 'GET /users/me/participations failed');
+    requestLogger.error({ error: message }, 'GET /users/me failed');
     res.status(500).json({ error: message });
   }
 });
@@ -205,6 +174,7 @@ router.get('/users/:id', async (req, res) => {
       id: user.id,
       name: user.name.getValue(),
       email: user.email.getValue(),
+      role: user.role,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
@@ -221,41 +191,11 @@ router.post('/users', async (req, res) => {
       id: user.id,
       name: user.name.getValue(),
       email: user.email.getValue(),
+      role: user.role,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     requestLogger.error({ error: message }, 'POST /users failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.post('/castings', async (req: AuthRequest, res) => {
-  requestLogger.info({}, 'POST /castings');
-
-  try {
-    const { title, description, directorEmail, directorName } = req.body;
-    const directorId = req.user?.id;
-    const casting = await createCastingUseCase.execute({ title, description, directorEmail, directorName, directorId });
-    res.status(201).json({
-      id: casting.id,
-      title: casting.title,
-      description: casting.description,
-      participants: casting.participants.map((p) => ({
-        userId: p.userId,
-        role: p.role,
-      })),
-      rounds: casting.rounds.map((r) => ({
-        id: r.id,
-        number: r.number,
-        participants: r.participants.map((p) => ({
-          actorId: p.id,
-          role: p.role,
-        })),
-      })),
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message }, 'POST /castings failed');
     res.status(400).json({ error: message });
   }
 });
@@ -284,621 +224,323 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
-router.get('/castings', async (_req, res) => {
-  requestLogger.info({}, 'GET /castings');
+// ── Items ───────────────────────────────────
+
+router.get('/items', async (_req, res) => {
+  requestLogger.info({}, 'GET /items');
 
   try {
-    const castings = await castingRepository.findAll();
-    res.json(castings.map((c) => ({
-      id: c.id,
-      title: c.title,
-      description: c.description,
-      participants: c.participants.map((p) => ({
-        userId: p.userId,
-        role: p.role,
-      })),
+    const items = await listItemsUseCase.execute();
+    res.json(items.map((i) => ({
+      id: i.id,
+      title: i.title.getValue(),
+      description: i.description,
+      status: i.status,
+      createdBy: i.createdBy,
+      createdAt: i.createdAt,
+      updatedAt: i.updatedAt,
     })));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message }, 'GET /castings failed');
+    requestLogger.error({ error: message }, 'GET /items failed');
     res.status(500).json({ error: message });
   }
 });
 
-router.get('/castings/:id', async (req, res) => {
+router.get('/items/:id', async (req, res) => {
   const { id } = req.params;
-  requestLogger.info({ id }, 'GET /castings/:id');
+  requestLogger.info({ id }, 'GET /items/:id');
 
   try {
-    const casting = await castingRepository.findById(id);
+    const item = await getItemUseCase.execute(id);
 
-    if (!casting) {
-      requestLogger.warn({ id }, 'GET /castings/:id: not found');
-      res.status(404).json({ error: 'Casting not found' });
+    if (!item) {
+      requestLogger.warn({ id }, 'GET /items/:id: not found');
+      res.status(404).json({ error: 'Item not found' });
       return;
     }
-
-    const rounds = await roundRepository.findByCastingId(casting.id);
-    const roundsData = rounds.map((r) => ({
-      id: r.id,
-      number: r.number,
-      status: r.status,
-      participants: r.participants.map((p) => ({
-        actorId: p.id,
-        role: p.role,
-      })),
-    }));
 
     res.json({
-      id: casting.id,
-      title: casting.title,
-      description: casting.description,
-      participants: casting.participants.map((p) => ({
-        userId: p.userId,
-        role: p.role,
-      })),
-      rounds: roundsData,
+      id: item.id,
+      title: item.title.getValue(),
+      description: item.description,
+      status: item.status,
+      createdBy: item.createdBy,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'GET /castings/:id failed');
+    requestLogger.error({ error: message, id }, 'GET /items/:id failed');
     res.status(400).json({ error: message });
   }
 });
 
-router.get('/rounds/:id', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'GET /rounds/:id');
+router.post('/items', async (req: AuthRequest, res) => {
+  requestLogger.info({}, 'POST /items');
 
   try {
-    const round = await roundRepository.findById(id);
-
-    if (!round) {
-      requestLogger.warn({ id }, 'GET /rounds/:id: not found');
-      res.status(404).json({ error: 'Round not found' });
-      return;
-    }
-
-    const submissions = await submissionRepository.findByRoundId(round.id);
-
-    const participantsWithEmail = await Promise.all(
-      round.participants.map(async (p) => {
-        const user = await userRepository.findById(p.id);
-        return {
-          actorId: p.id,
-          role: p.role,
-          email: user?.email?.getValue() ?? null,
-          name: user?.name?.getValue() ?? null,
-        };
-      })
-    );
-
-    res.json({
-      id: round.id,
-      number: round.number,
-      castingId: round.castingId,
-      status: round.status,
-      participants: participantsWithEmail,
-      submissions: submissions.map((s) => ({
-        id: s.id,
-        actorId: s.actorId,
-        videoUrl: s.videoUrl.getValue(),
-        videoKey: s.videoKey,
-        duration: s.duration,
-        status: s.status,
-        score: s.score.getValue(),
-        feedback: s.feedback.getValue(),
-      })),
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'GET /rounds/:id failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.get('/rounds/:id/submissions', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'GET /rounds/:id/submissions');
-
-  try {
-    const round = await roundRepository.findById(id);
-
-    if (!round) {
-      requestLogger.warn({ id }, 'GET /rounds/:id/submissions: round not found');
-      res.status(404).json({ error: 'Round not found' });
-      return;
-    }
-
-    const submissions = await submissionRepository.findByRoundId(round.id);
-    res.json(submissions.map((s) => ({
-      id: s.id,
-      actorId: s.actorId,
-      roundId: s.roundId,
-      videoUrl: s.videoUrl.getValue(),
-      videoKey: s.videoKey,
-      duration: s.duration,
-      status: s.status,
-      score: s.score.getValue(),
-      feedback: s.feedback.getValue(),
-    })));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'GET /rounds/:id/submissions failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.post('/submissions', videoUpload.single('video'), async (req: AuthRequest, res) => {
-  requestLogger.info({}, 'POST /submissions');
-
-  try {
-    const actorId = req.user?.id;
-    const { roundId, videoUrl, duration } = req.body;
-
-    // Determine video source: file upload or URL
-    let finalVideoUrl: string;
-    let videoKey: string | undefined;
-    if (req.file) {
-      // File uploaded — store key in BD, generate presigned URL for response
-      const ext = path.extname(req.file.originalname) || '.mp4';
-      const key = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-      const storedKey = await uploadFile(key, req.file.buffer, req.file.mimetype);
-      videoKey = storedKey;
-      finalVideoUrl = isR2Configured()
-        ? await getFileUrlAsync(storedKey)
-        : `/uploads/videos/${key}`;
-    } else if (videoUrl) {
-      // URL provided (YouTube, Vimeo, etc.)
-      finalVideoUrl = videoUrl;
-    } else {
-      res.status(400).json({ error: 'Either video URL or video file is required' });
-      return;
-    }
-
-    const submission = await submitVideoUseCase.execute({ actorId: actorId || '', roundId, videoUrl: finalVideoUrl, videoKey, duration: duration ? Number(duration) : undefined });
-
-    dispatchEvent('submission.created', {
-      submission_id: submission.id,
-      actor_id: submission.actorId,
-      round_id: submission.roundId,
-      video_url: finalVideoUrl,
-    });
-
-    res.status(201).json({
-      id: submission.id,
-      actorId: submission.actorId,
-      roundId: submission.roundId,
-      videoUrl: submission.videoUrl.getValue(),
-      duration: submission.duration,
-      status: submission.status,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    if (message.includes('not found')) {
-      requestLogger.error({ error: message }, 'POST /submissions: not found');
-      res.status(404).json({ error: message });
-      return;
-    }
-    if (message.includes('not invited')) {
-      requestLogger.error({ error: message }, 'POST /submissions: user not invited');
-      res.status(400).json({ error: message });
-      return;
-    }
-    if (message.includes('Invalid video URL') || message.includes('Video URL') || message.includes('Invalid file type')) {
-      requestLogger.error({ error: message }, 'POST /submissions: invalid input');
-      res.status(400).json({ error: message });
-      return;
-    }
-    requestLogger.error({ error: message }, 'POST /submissions failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.post('/rounds/participants', async (req, res) => {
-  requestLogger.info({}, 'POST /rounds/participants');
-
-  try {
-    const { roundId, actors, preselectors, createNewRound } = req.body;
-    const round = await manageParticipantsUseCase.execute({ roundId, actors: actors || [], preselectors: preselectors || [], createNewRound });
-    res.status(201).json({
-      id: round.id,
-      number: round.number,
-      castingId: round.castingId,
-      participants: round.participants.map((p) => ({
-        actorId: p.id,
-        role: p.role,
-      })),
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    if (message.includes('not found')) {
-      requestLogger.error({ error: message }, 'POST /rounds/participants: round not found');
-      res.status(404).json({ error: message });
-      return;
-    }
-    if (message.includes('empty') || message.includes('Empty')) {
-      requestLogger.error({ error: message }, 'POST /rounds/participants: empty participants');
-      res.status(400).json({ error: message });
-      return;
-    }
-    requestLogger.error({ error: message }, 'POST /rounds/participants failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.patch('/submissions/:id/review', async (req: AuthRequest, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'PATCH /submissions/:id/review');
-
-  try {
-    const { score, feedback } = req.body;
-    const directorId = req.user?.id;
-    const submission = await reviewSubmissionUseCase.execute({
-      submissionId: id,
-      score,
-      feedback,
-      directorId,
-    });
-
-    dispatchEvent('review.completed', {
-      submission_id: submission.id,
-      actor_id: submission.actorId,
-      director_id: directorId,
-      score: submission.score.getValue(),
-      feedback: submission.feedback.getValue(),
-    });
-
-    res.json({
-      id: submission.id,
-      actorId: submission.actorId,
-      roundId: submission.roundId,
-      videoUrl: submission.videoUrl.getValue(),
-      duration: submission.duration,
-      status: submission.status,
-      score: submission.score.getValue(),
-      feedback: submission.feedback.getValue(),
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    if (message.includes('not found')) {
-      requestLogger.error({ error: message }, 'PATCH /submissions/:id/review: not found');
-      res.status(404).json({ error: message });
-      return;
-    }
-    if (message.includes('Cannot review a submission that has been selected or rejected')) {
-      requestLogger.error({ error: message }, 'PATCH /submissions/:id/review: final status');
-      res.status(400).json({ error: message });
-      return;
-    }
-    if (message.includes('not the director')) {
-      requestLogger.error({ error: message }, 'PATCH /submissions/:id/review: not authorized');
-      res.status(403).json({ error: message });
-      return;
-    }
-    if (message.includes('Score must be') || message.includes('Feedback')) {
-      requestLogger.error({ error: message }, 'PATCH /submissions/:id/review: invalid input');
-      res.status(400).json({ error: message });
-      return;
-    }
-    requestLogger.error({ error: message }, 'PATCH /submissions/:id/review failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.put('/castings/:id', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'PUT /castings/:id');
-
-  try {
-    const existing = await castingRepository.findById(id);
-
-    if (!existing) {
-      requestLogger.warn({ id }, 'PUT /castings/:id: not found');
-      res.status(404).json({ error: 'Casting not found' });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
     const { title, description } = req.body;
+    const item = await createItemUseCase.execute({ title, description }, userId);
 
-    await prisma.casting.update({
-      where: { id },
-      data: {
-        ...(title !== undefined && { title }),
-        ...(description !== undefined && { description }),
-      },
-    });
-
-    const updated = await castingRepository.findById(id);
-    requestLogger.info({ id }, 'PUT /castings/:id: completed');
-    res.json({
-      id: updated!.id,
-      title: updated!.title,
-      description: updated!.description,
-      participants: updated!.participants.map((p) => ({
-        userId: p.userId,
-        role: p.role,
-      })),
+    res.status(201).json({
+      id: item.id,
+      title: item.title.getValue(),
+      description: item.description,
+      status: item.status,
+      createdBy: item.createdBy,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'PUT /castings/:id failed');
+    requestLogger.error({ error: message }, 'POST /items failed');
     res.status(400).json({ error: message });
   }
 });
 
-router.delete('/castings/:id', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'DELETE /castings/:id');
+router.patch('/items/:id', async (req: AuthRequest, res) => {
+  const { id } = req.params as { id: string };
+  requestLogger.info({ id }, 'PATCH /items/:id');
 
   try {
-    const existing = await castingRepository.findById(id);
-
-    if (!existing) {
-      requestLogger.warn({ id }, 'DELETE /castings/:id: not found');
-      res.status(404).json({ error: 'Casting not found' });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const rounds = await roundRepository.findByCastingId(id);
-    for (const round of rounds) {
-      await prisma.submission.deleteMany({ where: { roundId: round.id } });
-      await prisma.participant.deleteMany({ where: { roundId: round.id } });
-      await roundRepository.delete(round.id);
-    }
-
-    await prisma.participant.deleteMany({ where: { castingId: id } });
-    await castingRepository.delete(id);
-
-    requestLogger.info({ id }, 'DELETE /castings/:id: completed');
-    res.json({ success: true });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'DELETE /castings/:id failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.delete('/rounds/:roundId/participants/:userId', async (req: AuthRequest, res) => {
-  const { roundId, userId } = req.params;
-  const directorId = req.user?.id;
-  requestLogger.info({ roundId, userId }, 'DELETE /rounds/:roundId/participants/:userId');
-
-  try {
-    const round = await roundRepository.findById(roundId);
-    if (!round) {
-      res.status(404).json({ error: 'Round not found' });
-      return;
-    }
-
-    const casting = await castingRepository.findById(round.castingId);
-    if (!casting) {
-      res.status(404).json({ error: 'Casting not found' });
-      return;
-    }
-
-    const isDirector = casting.directorIds.some(id => id === directorId);
-    if (!isDirector) {
-      res.status(403).json({ error: 'Not authorized' });
-      return;
-    }
-
-    const participant = round.participants.find(p => p.id === userId);
-    if (!participant) {
-      res.status(404).json({ error: 'Participant not found in this round' });
-      return;
-    }
-
-    const submissions = await submissionRepository.findByRoundId(roundId);
-    const hadSubmissions = submissions.some(s => s.actorId === userId);
-
-    await prisma.participant.deleteMany({
-      where: { roundId, userId },
-    });
-
-    requestLogger.info({ roundId, userId }, 'DELETE /rounds/:roundId/participants/:userId: completed');
-    res.json({ success: true, hadSubmissions });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, roundId, userId }, 'DELETE /rounds/:roundId/participants/:userId failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.delete('/rounds/:id', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'DELETE /rounds/:id');
-
-  try {
-    const existing = await roundRepository.findById(id);
-
-    if (!existing) {
-      requestLogger.warn({ id }, 'DELETE /rounds/:id: not found');
-      res.status(404).json({ error: 'Round not found' });
-      return;
-    }
-
-    await prisma.submission.deleteMany({ where: { roundId: id } });
-    await prisma.participant.deleteMany({ where: { roundId: id } });
-    await roundRepository.delete(id);
-
-    requestLogger.info({ id }, 'DELETE /rounds/:id: completed');
-    res.json({ success: true });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'DELETE /rounds/:id failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.patch('/rounds/:id', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'PATCH /rounds/:id');
-
-  try {
-    const existing = await roundRepository.findById(id);
-
-    if (!existing) {
-      requestLogger.warn({ id }, 'PATCH /rounds/:id: not found');
-      res.status(404).json({ error: 'Round not found' });
-      return;
-    }
-
-    const { number } = req.body;
-
-    if (typeof number !== 'number' || !Number.isInteger(number) || number < 1) {
-      requestLogger.warn({ id, number }, 'PATCH /rounds/:id: invalid number');
-      res.status(400).json({ error: 'Number must be a positive integer' });
-      return;
-    }
-
-    await prisma.round.update({
-      where: { id },
-      data: { number },
-    });
-
-    const updated = await roundRepository.findById(id);
-    requestLogger.info({ id }, 'PATCH /rounds/:id: completed');
-    res.json({
-      id: updated!.id,
-      number: updated!.number,
-      castingId: updated!.castingId,
-      participants: updated!.participants.map((p) => ({
-        actorId: p.id,
-        role: p.role,
-      })),
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'PATCH /rounds/:id failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.delete('/submissions/:id', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'DELETE /submissions/:id');
-
-  try {
-    const existing = await submissionRepository.findById(id);
-
-    if (!existing) {
-      requestLogger.warn({ id }, 'DELETE /submissions/:id: not found');
-      res.status(404).json({ error: 'Submission not found' });
-      return;
-    }
-
-    await submissionRepository.delete(id);
-
-    requestLogger.info({ id }, 'DELETE /submissions/:id: completed');
-    res.json({ success: true });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'DELETE /submissions/:id failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.get('/submissions/:id', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'GET /submissions/:id');
-
-  try {
-    const submission = await submissionRepository.findById(id);
-
-    if (!submission) {
-      requestLogger.warn({ id }, 'GET /submissions/:id: not found');
-      res.status(404).json({ error: 'Submission not found' });
-      return;
-    }
+    const { title, description, status } = req.body;
+    const item = await updateItemUseCase.execute(id, { title, description, status }, userId);
 
     res.json({
-      id: submission.id,
-      actorId: submission.actorId,
-      roundId: submission.roundId,
-      videoUrl: submission.videoUrl.getValue(),
-      videoKey: submission.videoKey,
-      duration: submission.duration,
-      status: submission.status,
-      score: submission.score.getValue(),
-      feedback: submission.feedback.getValue(),
+      id: item.id,
+      title: item.title.getValue(),
+      description: item.description,
+      status: item.status,
+      createdBy: item.createdBy,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'GET /submissions/:id failed');
+    if (message.includes('not found')) {
+      requestLogger.error({ error: message }, 'PATCH /items/:id: not found');
+      res.status(404).json({ error: message });
+      return;
+    }
+    requestLogger.error({ error: message, id }, 'PATCH /items/:id failed');
     res.status(400).json({ error: message });
   }
 });
 
-router.get('/videos/:submissionId/url', async (req, res) => {
-  const { submissionId } = req.params;
-  requestLogger.info({ submissionId }, 'GET /videos/:submissionId/url');
+router.delete('/items/:id', async (req: AuthRequest, res) => {
+  const { id } = req.params as { id: string };
+  requestLogger.info({ id }, 'DELETE /items/:id');
 
   try {
-    const submission = await submissionRepository.findById(submissionId);
-
-    if (!submission) {
-      requestLogger.warn({ submissionId }, 'GET /videos/:submissionId/url: not found');
-      res.status(404).json({ error: 'Submission not found' });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const videoKey = submission.videoKey;
+    await deleteItemUseCase.execute(id, userId);
 
-    if (!videoKey) {
-      // External URL (YouTube, Vimeo) or local — return as-is
-      res.json({ url: submission.videoUrl.getValue() });
+    requestLogger.info({ id }, 'DELETE /items/:id: completed');
+    res.status(204).send();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    if (message.includes('not found')) {
+      requestLogger.error({ error: message }, 'DELETE /items/:id: not found');
+      res.status(404).json({ error: message });
+      return;
+    }
+    requestLogger.error({ error: message, id }, 'DELETE /items/:id failed');
+    res.status(400).json({ error: message });
+  }
+});
+
+// ── Files (generic presigned URL) ───────────
+
+router.get('/files/:key/url', async (req, res) => {
+  const { key } = req.params;
+  requestLogger.info({ key }, 'GET /files/:key/url');
+
+  try {
+    if (!isR2Configured()) {
+      res.json({ url: `/uploads/${key}` });
       return;
     }
 
-    // Generate presigned URL from R2 key
-    const url = await getFileUrlAsync(videoKey, 7200);
+    const url = await getFileUrlAsync(key, 7200);
     res.json({ url });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, submissionId }, 'GET /videos/:submissionId/url failed');
+    requestLogger.error({ error: message, key }, 'GET /files/:key/url failed');
     res.status(400).json({ error: message });
   }
 });
 
-router.patch('/submissions/:id/metadata', async (req, res) => {
-  const { id } = req.params;
-  requestLogger.info({ id }, 'PATCH /submissions/:id/metadata');
+// ── Config ──────────────────────────────────
 
+router.get('/config', async (_req, res) => {
+  requestLogger.info({}, 'GET /config');
   try {
-    const existing = await submissionRepository.findById(id);
+    const configs = await getAllConfigUseCase.execute();
+    res.json(configs.map((c) => ({
+      id: c.id,
+      key: c.key,
+      value: c.value,
+      description: c.description,
+      category: c.category,
+      updatedBy: c.updatedBy,
+      updatedAt: c.updatedAt,
+    })));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    requestLogger.error({ error: message }, 'GET /config failed');
+    res.status(500).json({ error: message });
+  }
+});
 
-    if (!existing) {
-      requestLogger.warn({ id }, 'PATCH /submissions/:id/metadata: not found');
-      res.status(404).json({ error: 'Submission not found' });
+router.get('/config/category/:category', async (req, res) => {
+  const { category } = req.params;
+  requestLogger.info({ category }, 'GET /config/category/:category');
+  try {
+    const configs = await getConfigByCategoryUseCase.execute(category);
+    res.json(configs.map((c) => ({
+      id: c.id,
+      key: c.key,
+      value: c.value,
+      description: c.description,
+      category: c.category,
+      updatedBy: c.updatedBy,
+      updatedAt: c.updatedAt,
+    })));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    requestLogger.error({ error: message, category }, 'GET /config/category/:category failed');
+    res.status(500).json({ error: message });
+  }
+});
+
+router.get('/config/:key', async (req, res) => {
+  const { key } = req.params;
+  requestLogger.info({ key }, 'GET /config/:key');
+  try {
+    const config = await getConfigUseCase.execute(key);
+    if (!config) {
+      res.status(404).json({ error: `Config "${key}" not found` });
       return;
     }
-
-    const { duration } = req.body;
-    const updated = existing.withDuration(Number(duration));
-    await submissionRepository.save(updated);
-
-    requestLogger.info({ id }, 'PATCH /submissions/:id/metadata: completed');
     res.json({
-      id: updated.id,
-      actorId: updated.actorId,
-      roundId: updated.roundId,
-      videoUrl: updated.videoUrl.getValue(),
-      duration: updated.duration,
-      status: updated.status,
-      score: updated.score.getValue(),
-      feedback: updated.feedback.getValue(),
+      id: config.id,
+      key: config.key,
+      value: config.value,
+      description: config.description,
+      category: config.category,
+      updatedBy: config.updatedBy,
+      updatedAt: config.updatedAt,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, id }, 'PATCH /submissions/:id/metadata failed');
+    requestLogger.error({ error: message, key }, 'GET /config/:key failed');
+    res.status(500).json({ error: message });
+  }
+});
+
+router.put('/config/:key', async (req: AuthRequest, res) => {
+  const { key } = req.params as { key: string };
+  requestLogger.info({ key }, 'PUT /config/:key');
+  try {
+    const { value, description, category } = req.body;
+    if (value === undefined) {
+      res.status(400).json({ error: 'value is required' });
+      return;
+    }
+    const normalizedValue = key === 'logging.level' ? normalizeLogLevel(value) : value;
+    const config = await upsertConfigUseCase.execute({
+      key,
+      value: normalizedValue,
+      description,
+      category,
+      updatedBy: req.user?.id,
+    });
+    res.status(201).json({
+      id: config.id,
+      key: config.key,
+      value: config.value,
+      description: config.description,
+      category: config.category,
+      updatedBy: config.updatedBy,
+      updatedAt: config.updatedAt,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    requestLogger.error({ error: message, key }, 'PUT /config/:key failed');
     res.status(400).json({ error: message });
   }
 });
 
-// ============================================
-// Event Queue endpoints (service-to-service)
-// ============================================
+router.patch('/config/:key', async (req: AuthRequest, res) => {
+  const { key } = req.params as { key: string };
+  requestLogger.info({ key }, 'PATCH /config/:key');
+  try {
+    const existing = await getConfigUseCase.execute(key);
+    if (!existing) {
+      res.status(404).json({ error: `Config "${key}" not found` });
+      return;
+    }
+    const { value, description, category } = req.body;
+    const normalizedValue = key === 'logging.level' && value !== undefined ? normalizeLogLevel(value) : value;
+    const config = await upsertConfigUseCase.execute({
+      key,
+      value: normalizedValue !== undefined ? normalizedValue : existing.value,
+      description: description !== undefined ? description : existing.description ?? undefined,
+      category: category !== undefined ? category : existing.category ?? undefined,
+      updatedBy: req.user?.id,
+    });
+    res.json({
+      id: config.id,
+      key: config.key,
+      value: config.value,
+      description: config.description,
+      category: config.category,
+      updatedBy: config.updatedBy,
+      updatedAt: config.updatedAt,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    requestLogger.error({ error: message, key }, 'PATCH /config/:key failed');
+    res.status(400).json({ error: message });
+  }
+});
+
+router.delete('/config/:key', async (req: AuthRequest, res) => {
+  const { key } = req.params as { key: string };
+  requestLogger.info({ key }, 'DELETE /config/:key');
+  try {
+    await deleteConfigUseCase.execute(key, req.user?.id);
+    res.status(204).send();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    if (message.includes('not found')) {
+      res.status(404).json({ error: message });
+      return;
+    }
+    requestLogger.error({ error: message, key }, 'DELETE /config/:key failed');
+    res.status(400).json({ error: message });
+  }
+});
+
+// ── Event Queue (service-to-service) ────────
 
 router.get('/events/pending', async (req, res) => {
   try {
@@ -976,160 +618,6 @@ router.patch('/events/:id/fail', async (req, res) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     requestLogger.error({ error: message, id }, 'PATCH /events/:id/fail failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-// ============================================
-// Config endpoints
-// ============================================
-
-router.get('/config', async (_req, res) => {
-  requestLogger.info({}, 'GET /config');
-  try {
-    const configs = await getAllConfigUseCase.execute();
-    res.json(configs.map((c) => ({
-      id: c.id,
-      key: c.key,
-      value: c.value,
-      description: c.description,
-      category: c.category,
-      updatedBy: c.updatedBy,
-      updatedAt: c.updatedAt,
-    })));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message }, 'GET /config failed');
-    res.status(500).json({ error: message });
-  }
-});
-
-router.get('/config/category/:category', async (req, res) => {
-  const { category } = req.params;
-  requestLogger.info({ category }, 'GET /config/category/:category');
-  try {
-    const configs = await getConfigByCategoryUseCase.execute(category);
-    res.json(configs.map((c) => ({
-      id: c.id,
-      key: c.key,
-      value: c.value,
-      description: c.description,
-      category: c.category,
-      updatedBy: c.updatedBy,
-      updatedAt: c.updatedAt,
-    })));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, category }, 'GET /config/category/:category failed');
-    res.status(500).json({ error: message });
-  }
-});
-
-router.get('/config/:key', async (req, res) => {
-  const { key } = req.params;
-  requestLogger.info({ key }, 'GET /config/:key');
-  try {
-    const config = await getConfigUseCase.execute(key);
-    if (!config) {
-      res.status(404).json({ error: `Config "${key}" not found` });
-      return;
-    }
-    res.json({
-      id: config.id,
-      key: config.key,
-      value: config.value,
-      description: config.description,
-      category: config.category,
-      updatedBy: config.updatedBy,
-      updatedAt: config.updatedAt,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, key }, 'GET /config/:key failed');
-    res.status(500).json({ error: message });
-  }
-});
-
-router.put('/config/:key', async (req: AuthRequest, res) => {
-  const { key } = req.params;
-  requestLogger.info({ key }, 'PUT /config/:key');
-  try {
-    const { value, description, category } = req.body;
-    if (value === undefined) {
-      res.status(400).json({ error: 'value is required' });
-      return;
-    }
-    const normalizedValue = key === 'logging.level' ? normalizeLogLevel(value) : value;
-    const config = await upsertConfigUseCase.execute({
-      key,
-      value: normalizedValue,
-      description,
-      category,
-      updatedBy: req.user?.id,
-    });
-    res.status(201).json({
-      id: config.id,
-      key: config.key,
-      value: config.value,
-      description: config.description,
-      category: config.category,
-      updatedBy: config.updatedBy,
-      updatedAt: config.updatedAt,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, key }, 'PUT /config/:key failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.patch('/config/:key', async (req: AuthRequest, res) => {
-  const { key } = req.params;
-  requestLogger.info({ key }, 'PATCH /config/:key');
-  try {
-    const existing = await getConfigUseCase.execute(key);
-    if (!existing) {
-      res.status(404).json({ error: `Config "${key}" not found` });
-      return;
-    }
-    const { value, description, category } = req.body;
-    const normalizedValue = key === 'logging.level' && value !== undefined ? normalizeLogLevel(value) : value;
-    const config = await upsertConfigUseCase.execute({
-      key,
-      value: normalizedValue !== undefined ? normalizedValue : existing.value,
-      description: description !== undefined ? description : existing.description ?? undefined,
-      category: category !== undefined ? category : existing.category ?? undefined,
-      updatedBy: req.user?.id,
-    });
-    res.json({
-      id: config.id,
-      key: config.key,
-      value: config.value,
-      description: config.description,
-      category: config.category,
-      updatedBy: config.updatedBy,
-      updatedAt: config.updatedAt,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    requestLogger.error({ error: message, key }, 'PATCH /config/:key failed');
-    res.status(400).json({ error: message });
-  }
-});
-
-router.delete('/config/:key', async (req: AuthRequest, res) => {
-  const { key } = req.params;
-  requestLogger.info({ key }, 'DELETE /config/:key');
-  try {
-    await deleteConfigUseCase.execute(key, req.user?.id);
-    res.status(204).send();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    if (message.includes('not found')) {
-      res.status(404).json({ error: message });
-      return;
-    }
-    requestLogger.error({ error: message, key }, 'DELETE /config/:key failed');
     res.status(400).json({ error: message });
   }
 });

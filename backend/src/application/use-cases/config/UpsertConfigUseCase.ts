@@ -34,7 +34,7 @@ export class UpsertConfigUseCase {
     await this.bitacoraService.log({
       userId: updatedBy || 'system',
       action: existing ? 'update_config' : 'create_config',
-      details: { key, category },
+      metadata: { key, category },
     });
 
     logger.info({ key }, 'UpsertConfigUseCase: completed');

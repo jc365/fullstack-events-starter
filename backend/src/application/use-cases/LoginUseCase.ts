@@ -12,9 +12,9 @@ import HashService from '../../infrastructure/security/HashService';
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
 
 const DEMO_USERS: Record<string, string> = {
-  director: 'director@demo.com',
-  actor: 'actor1@demo.com',
-  preselector: 'preselector@demo.com',
+  admin: 'admin@demo.com',
+  user: 'user1@demo.com',
+  guest: 'guest@demo.com',
 };
 
 export class LoginUseCase {
@@ -28,7 +28,7 @@ export class LoginUseCase {
 
     if (xUserId) {
       if (!DEMO_MODE) {
-        logger.error('LoginUseCase: demo mode disabled, rejected xUserId');
+        logger.error({}, 'LoginUseCase: demo mode disabled, rejected xUserId');
         throw new Error('Demo mode is disabled');
       }
 

@@ -9,10 +9,9 @@
 export interface BitacoraEvent {
   userId: string;
   action: string;
-  details?: Record<string, unknown>;
-  castingId?: string;
-  roundId?: string;
-  submissionId?: string;
+  entityType?: string;
+  entityId?: string;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -21,8 +20,6 @@ export interface BitacoraEvent {
 export default interface IBitacoraRepository {
   /**
    * Logs a business event to the bitacora.
-   * @param event - The event data to log.
-   * @returns A Promise that resolves when the operation is completed.
    */
   log(event: BitacoraEvent): Promise<void>;
 }

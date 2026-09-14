@@ -13,10 +13,10 @@ export default class PrismaBitacoraRepository implements IBitacoraRepository {
       data: {
         userId: event.userId,
         action: event.action,
-        details: event.details ?? undefined,
-        castingId: event.castingId ?? undefined,
-        roundId: event.roundId ?? undefined,
-        submissionId: event.submissionId ?? undefined,
+        entityType: event.entityType ?? undefined,
+        entityId: event.entityId ?? undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        metadata: event.metadata as any,
       },
     });
   }

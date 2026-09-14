@@ -14,7 +14,8 @@ export async function dispatchEvent(eventType: string, payload: Record<string, u
     await prisma.eventQueue.create({
       data: {
         eventType,
-        payload,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        payload: payload as any,
         status: 'pending',
       },
     });
