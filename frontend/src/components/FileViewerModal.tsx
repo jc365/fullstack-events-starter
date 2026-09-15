@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import client from '../api/client';
 import { useUserCache } from '../context/UserCacheContext';
-import { getStatusStyle, type SubmissionStatus } from '../utils/submissionStatus';
-import { scoreToStars } from '../utils/scoring';
+// TODO(3.2): reemplazar por equivalente genérico
+// import { getStatusStyle, type SubmissionStatus } from '../utils/submissionStatus';
+// import { scoreToStars } from '../utils/scoring';
 
 interface Submission {
   id: string;

@@ -7,8 +7,8 @@ import type { ThemeId } from '../context/ThemeContext';
 
 const navItems = [
   { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
-  { to: '/castings', icon: 'groups', label: 'Casting Calls' },
-  { to: '/castings/create', icon: 'add_circle', label: 'Create Casting' },
+  { to: '/items', icon: 'groups', label: 'Items' },
+  { to: '/items/create', icon: 'add_circle', label: 'Create Item' },
 ];
 
 const DEMO_USER_MAP: Record<string, string> = {

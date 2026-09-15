@@ -1,9 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
-import Castings from './pages/Castings';
-import CreateCasting from './pages/CreateCasting';
-import CastingDetail from './pages/CastingDetail';
-import RoundDetail from './pages/RoundDetail';
+import Items from './pages/Items';
+import CreateItem from './pages/CreateItem';
+import ItemDetail from './pages/ItemDetail';
 import Layout from './components/Layout';
 import { UserProvider } from './context/UserContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -24,10 +23,9 @@ export default function App() {
                   <Route path="/" element={<Layout />}>
                     <Route index element={<Navigate to="/dashboard" replace />} />
                     <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="castings" element={<Castings />} />
-                    <Route path="castings/create" element={<CreateCasting />} />
-                    <Route path="castings/:castingId" element={<CastingDetail />} />
-                    <Route path="rounds/:roundId" element={<RoundDetail />} />
+                    <Route path="items" element={<Items />} />
+                    <Route path="items/create" element={<CreateItem />} />
+                    <Route path="items/:id" element={<ItemDetail />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Route>
                 </Routes>

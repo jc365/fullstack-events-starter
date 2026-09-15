@@ -2,8 +2,9 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client';
 import { useUser } from '../context/UserContext';
-import SubmitVideoModal from '../components/SubmitVideoModal';
-import type { SubmissionStatus } from '../utils/submissionStatus';
+import SubmitFileModal from '../components/SubmitFileModal';
+// TODO(3.2): reemplazar por equivalente genérico
+// import type { SubmissionStatus } from '../utils/submissionStatus';
 import { getRoleBadge } from '../utils/roleConfig';
 
 interface Participant {
@@ -206,7 +207,7 @@ export default function Dashboard() {
       )}
 
       {submitModalRoundId && (
-        <SubmitVideoModal
+        <SubmitFileModal
           roundId={submitModalRoundId}
           isOpen={true}
           onClose={() => setSubmitModalRoundId(null)}
