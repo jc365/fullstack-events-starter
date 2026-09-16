@@ -62,7 +62,6 @@ venv/
 *.db
 *.sqlite
 *.sqlite3
-prisma/backups/
 *.sql
 uploads/
 
