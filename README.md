@@ -31,18 +31,10 @@ cd mi-proyecto
 #    - orchestration/.env (si aplica)
 #    - tests/REST Client/.env (URLs para pruebas manuales)
 
-# 3. Instalar dependencias
-npm install
-cd backend && npm install && cd ../frontend && npm install && cd ..
+# 3. Instalar dependencias, levantar PostgreSQL y sembrar
+./postsetup.sh
 
-# 4. Levantar PostgreSQL
-npm run db:up
-
-# 5. Aplicar schema y seed
-npm run db:push
-npm run db:seed
-
-# 6. Arrancar backend y frontend
+# 4. Arrancar backend y frontend
 npm run dev:all
 ```
 
@@ -52,6 +44,7 @@ Comandos útiles (desde la raíz):
 
 | Comando | Descripción |
 |---------|-------------|
+| `./postsetup.sh` | Instalar deps, arrancar PostgreSQL y sembrar |
 | `npm run db:up` | Levantar PostgreSQL (Docker) |
 | `npm run db:down` | Detener PostgreSQL |
 | `npm run db:push` | Sincronizar schema contra la BD |

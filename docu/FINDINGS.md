@@ -55,3 +55,13 @@ npx tsc --noEmit 2>&1 | wc -l
 - `frontend/src/hooks/useFileUrls.ts`: pendiente de generalizar. Se resuelve en 3.3.
 - `frontend/src/pages/CreateItem.tsx`: endpoints `/castings` y navigate `/castings` sin actualizar. Se adapta en 3.4.
 - `frontend/src/pages/Items.tsx`: endpoint `/castings` sin actualizar. Se adapta en 3.4.
+
+## Secretos placeholder (3.3.0c)
+
+Los .env.example incluyen valores placeholder para que el starter
+arranque out-of-the-box en local:
+
+- JWT_SECRET=cambiame-por-un-secreto-largo-y-aleatorio
+
+Obligatorio cambiarlos antes de desplegar a producción.
+Generar secreto: `openssl rand -hex 32`

@@ -76,7 +76,7 @@ npm run db:up           # Start PostgreSQL container
 npm run db:down         # Stop PostgreSQL container
 npm run db:backup       # Backup PostgreSQL
 npm run db:restore      # Restore PostgreSQL backup
-npm run db:migrate      # Run Prisma migrations
+npm run db:push         # Sincronizar schema (db push)
 npm run db:studio       # Open Prisma Studio
 
 # Dev with all services (DB + Backend + Frontend + Orchestrator)
@@ -121,7 +121,7 @@ cd backend && npx tsc --noEmit 2>&1 | wc -l
 ```bash
 npm run db:up        # Levantar PostgreSQL (Docker)
 npm run db:down      # Detener PostgreSQL
-npm run db:migrate   # Aplicar schema Prisma (db:push)
+npm run db:push      # Sincronizar schema (db push)
 npm run db:seed      # Insertar datos demo
 npm run db:studio    # Abrir Prisma Studio
 npm run db:backup    # Backup de PostgreSQL
