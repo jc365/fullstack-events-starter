@@ -45,7 +45,7 @@ export default function CastingDetail() {
 
   const fetchCasting = () => {
     if (!castingId) return;
-    client.get(`/castings/${castingId}`)
+    client.get(`/items/${castingId}`)
       .then((res) => setCasting(res.data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -58,6 +58,7 @@ export default function CastingDetail() {
     casting.participants.forEach((p) => ensureUser(p.userId));
   }, [casting, ensureUser]);
 
+  // TODO(3.4): eliminar lógica de rounds
   useEffect(() => {
     if (!casting) return;
     casting.rounds.forEach((round) => {
@@ -83,7 +84,7 @@ export default function CastingDetail() {
   const handleDelete = async () => {
     if (!castingId) return;
     try {
-      await client.delete(`/castings/${castingId}`);
+      await client.delete(`/items/${castingId}`);
       showSuccess('Casting deleted');
       navigate('/dashboard');
     } catch (err) {
@@ -138,7 +139,7 @@ export default function CastingDetail() {
                 <button
                   onClick={() => setShowEditModal(true)}
                   className="p-2 rounded hover:bg-surface-container transition-colors"
-                  title="Edit casting"
+                  aria-label="Edit item"
                 >
                   <span className="material-symbols-outlined text-on-surface-variant">edit</span>
                 </button>
@@ -155,69 +156,10 @@ export default function CastingDetail() {
         </div>
       </div>
 
-      {/* Rounds */}
-      <div className="bg-surface border border-outline-variant/30 rounded-xl p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-headline-md text-headline-md text-on-background">Rounds</h2>
-        </div>
-        {casting.rounds.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {casting.rounds.map((round) => {
-              const counts = submissionCounts[round.id];
-              const actors = round.participants.filter((p) => p.role === 'actor').length;
-              const preselectors = round.participants.filter((p) => p.role === 'preselector').length;
-              return (
-                <Link
-                  key={round.id}
-                  to={`/rounds/${round.id}`}
-                  className="group bg-surface-container-high border border-outline-variant/30 rounded-xl p-5 hover:border-primary/50 hover:bg-surface-container-low transition-colors duration-300 flex flex-col"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-display-lg text-display-lg text-primary">Round {round.number}</span>
-                    {/* <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">chevron_right</span> */}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 text-on-surface-variant mb-1">
-                    <span className="material-symbols-outlined text-[14px]">group</span>
-                    <span className="font-body-sm text-body-sm">Participants: {round.participants.length}</span>
-                  </div>
-                  <div className="flex gap-4 text-xs text-on-surface-variant mb-3 pl-[22px]">
-                    <span>Preselectors: {preselectors}</span>
-                    <span>Actors: {actors}</span>
-                  </div>
-
-                  <div className="w-full h-px bg-outline-variant/20" />
-
-                  <div className="flex items-center gap-1.5 text-on-surface-variant mt-3 mb-1">
-                    <span className="material-symbols-outlined text-[14px]">videocam</span>
-                    <span className="font-body-sm text-body-sm">Submissions: {counts ? counts.total : '...'}</span>
-                  </div>
-                  {counts ? (
-                    <div className="pl-[22px]">
-                      <div className="flex gap-4 text-xs text-on-surface-variant">
-                        <span>Pendings: <span className="text-primary font-medium">{counts.pending}</span></span>
-                        <span>Revieweds: <span className="font-medium">{counts.reviewed}</span></span>
-                      </div>
-                      {(counts.selected > 0 || counts.rejected > 0) && (
-                        <div className="flex gap-4 text-xs text-on-surface-variant mt-1">
-                          <span>Selecteds: <span className="text-green-600 font-medium">{counts.selected}</span></span>
-                          <span>Rejected: <span className="text-red-600 font-medium">{counts.rejected}</span></span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="pl-[22px]">
-                      <p className="text-xs text-on-surface-variant">Loading...</p>
-                    </div>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-on-surface-variant text-sm">No rounds yet.</p>
-        )}
-      </div>
+      {/* TODO(3.4): eliminar lógica de rounds */}
+      {/* <div className="bg-surface border border-outline-variant/30 rounded-xl p-6">
+        ... rounds block ...
+      </div> */}
 
       {/* Edit Modal */}
       {showEditModal && (
@@ -266,7 +208,7 @@ function EditCastingModal({
     setSaving(true);
     setError('');
     try {
-      await client.put(`/castings/${casting.id}`, {
+      await client.put(`/items/${casting.id}`, {
         title: title.trim(),
         description: description.trim(),
       });
@@ -279,7 +221,7 @@ function EditCastingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Edit casting">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Edit item">
       <div className="bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/30 w-full max-w-md mx-4 p-6">
         <h2 className="font-headline-md text-headline-md text-on-surface mb-4">Edit Casting</h2>
         <div className="flex flex-col gap-4">

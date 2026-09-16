@@ -43,3 +43,15 @@ npx tsc --noEmit 2>&1 | wc -l
 **Estado:** resuelto en Fase 2 (post-test).
 
 `setup.sh` copia `.env.example` → `.env` para backend, frontend, orchestration y tests/REST Client.
+
+## Fase 3.2 — Deudas abiertas (frontend)
+
+- `frontend/src/pages/ItemDetail.tsx`: usa `isDirectorOf` / `getRoleInCasting` (u otros helpers de UserContext) que se han eliminado en 3.2. Rompe TS. Se adapta en 3.4.
+- `frontend/src/components/Layout.tsx`: `DEMO_USER_MAP` aún contiene roles director/actor/preselector. Se adapta en 3.4.
+- `frontend/src/pages/Dashboard.tsx`: usa `participations` de UserContext (eliminado) y endpoints `/castings`, `/rounds`. Marcado con TODO(3.4).
+- `frontend/src/App.test.tsx`: mockea endpoints `/participations`, `/castings`, `/rounds/` que ya no existen. Marcado con TODO(3.4).
+- `frontend/src/components/FileViewerModal.tsx`: imports comentados (submissionStatus, scoring) pendientes de equivalente genérico. Se resuelve en 3.3.
+- `frontend/src/components/SubmitFileModal.tsx`: pendiente de generalizar (quitar validaciones de video). Se resuelve en 3.3.
+- `frontend/src/hooks/useFileUrls.ts`: pendiente de generalizar. Se resuelve en 3.3.
+- `frontend/src/pages/CreateItem.tsx`: endpoints `/castings` y navigate `/castings` sin actualizar. Se adapta en 3.4.
+- `frontend/src/pages/Items.tsx`: endpoint `/castings` sin actualizar. Se adapta en 3.4.

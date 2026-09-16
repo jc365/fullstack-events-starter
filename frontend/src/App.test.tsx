@@ -26,6 +26,7 @@ function setupUserMocks() {
     if (urlStr.includes('/castings')) {
       return Promise.resolve({ data: [{ id: 'c1', title: 'Test Casting', description: 'Desc', participants: [{ userId: 'user-1', role: 'director' }] }] });
     }
+    // TODO(3.4): adaptar Dashboard a Items
     if (urlStr.includes('/rounds/')) {
       return Promise.resolve({ data: { id: 'r1', number: 1, castingId: 'c1', participants: [], submissions: [] } });
     }

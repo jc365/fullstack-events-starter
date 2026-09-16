@@ -1,11 +1,3 @@
-interface Participation {
-  type: 'casting' | 'round';
-  castingId?: string;
-  roundId?: string;
-  role: string;
-  [key: string]: unknown;
-}
-
 interface RoleBadgeConfig {
   label: string;
   icon: string;
@@ -13,20 +5,20 @@ interface RoleBadgeConfig {
 }
 
 export const ROLE_CONFIG: Record<string, RoleBadgeConfig> = {
-  director: {
-    label: 'DIRECTOR',
+  admin: {
+    label: 'ADMIN',
+    icon: '\u{1F451}',
+    className: 'bg-[var(--color-red,#ef4444)]/10 text-[var(--color-red,#ef4444)] border-[var(--color-red,#ef4444)]/30',
+  },
+  user: {
+    label: 'USER',
     icon: '\u{1F464}',
     className: 'bg-[var(--color-blue,#3b82f6)]/10 text-[var(--color-blue,#3b82f6)] border-[var(--color-blue,#3b82f6)]/30',
   },
-  actor: {
-    label: 'ACTOR',
-    icon: '\u{1F3AD}',
-    className: 'bg-[var(--color-green,#22c55e)]/10 text-[var(--color-green,#22c55e)] border-[var(--color-green,#22c55e)]/30',
-  },
-  preselector: {
-    label: 'PRESELECTOR',
+  guest: {
+    label: 'GUEST',
     icon: '\u{1F441}\u{FE0F}',
-    className: 'bg-[var(--color-amber,#f59e0b)]/10 text-[var(--color-amber,#f59e0b)] border-[var(--color-amber,#f59e0b)]/30',
+    className: 'bg-surface-container text-on-surface-variant border-outline-variant/30',
   },
 };
 
@@ -36,27 +28,4 @@ export function getRoleBadge(role: string): RoleBadgeConfig {
     icon: '\u{1F539}',
     className: 'bg-surface-container text-on-surface-variant border-outline-variant/30',
   };
-}
-
-export function getRolesForCasting(participations: Participation[], castingId: string): string[] {
-  const roles = new Set<string>();
-  for (const p of participations) {
-    if (p.type === 'casting' && p.castingId === castingId) {
-      roles.add(p.role);
-    }
-    // if (p.type === 'round' && (p as Participation & { castingId?: string }).castingId === castingId) {
-    if (p.type === 'round' && p.castingId === castingId) {
-      roles.add(p.role);
-    }
-  }
-  return Array.from(roles);
-}
-
-export function getRoleForRound(participations: Participation[], roundId: string): string | null {
-  for (const p of participations) {
-    if (p.type === 'round' && p.roundId === roundId) {
-      return p.role;
-    }
-  }
-  return null;
 }

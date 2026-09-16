@@ -112,8 +112,10 @@ export default function Dashboard() {
           setCastings(myCastings);
 
           const roundsData: RoundSummary[] = [];
+          // TODO(3.4): adaptar Dashboard a Items
           for (const casting of myCastings) {
             const castingRes = await client.get(`/castings/${casting.id}`);
+            // TODO(3.4): adaptar Dashboard a Items
             if (cancelled) return;
             for (const r of castingRes.data.rounds) {
               const roundRes = await client.get(`/rounds/${r.id}`);
@@ -221,6 +223,7 @@ export default function Dashboard() {
   );
 }
 
+// TODO(3.4): adaptar Dashboard a Items
 function CastingCard({ casting }: { casting: CastingWithRoles }) {
   return (
     <Link
