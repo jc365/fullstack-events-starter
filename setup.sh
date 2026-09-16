@@ -273,7 +273,7 @@ print_summary() {
     echo "  Next steps:"
     echo "    1. Edit .env files with your real credentials (DATABASE_URL, JWT_SECRET, etc.)"
     echo "    2. npm install && cd backend && npm install && cd ../frontend && npm install"
-    echo "    3. npm run db:up && npm run db:migrate && npm run db:seed"
+    echo "    3. npm run db:up && npm run db:push && npm run db:seed"
     echo "    4. npm run dev:all"
     echo ""
   fi

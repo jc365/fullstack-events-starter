@@ -11,7 +11,10 @@
     "start": "tsx src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
 
+    "postinstall": "prisma generate",
+
     "db:push": "npx prisma db push",
+    "db:generate": "prisma generate",
     "db:studio": "npx prisma studio",
     "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",
 

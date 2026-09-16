@@ -39,12 +39,14 @@ cd backend && npm install && cd ../frontend && npm install && cd ..
 npm run db:up
 
 # 5. Aplicar schema y seed
-npm run db:migrate
+npm run db:push
 npm run db:seed
 
 # 6. Arrancar backend y frontend
 npm run dev:all
 ```
+
+> **Nota:** El starter usa `prisma db push` (sin migraciones versionadas). Si necesitas migraciones versionadas, consulta [docu/MIGRATIONS.md](docu/MIGRATIONS.md).
 
 Comandos útiles (desde la raíz):
 
@@ -52,7 +54,7 @@ Comandos útiles (desde la raíz):
 |---------|-------------|
 | `npm run db:up` | Levantar PostgreSQL (Docker) |
 | `npm run db:down` | Detener PostgreSQL |
-| `npm run db:migrate` | Aplicar schema Prisma |
+| `npm run db:push` | Sincronizar schema contra la BD |
 | `npm run db:seed` | Insertar datos demo |
 | `npm run db:studio` | Abrir Prisma Studio |
 | `npm run db:backup` | Backup de PostgreSQL |
@@ -99,7 +101,7 @@ fullstack-events-starter/
 | Feature | Stack | Description |
 |---------|-------|-------------|
 | REST API | Express 5 + TypeScript | Full CRUD with validation, auth, rate limiting |
-| Database | Prisma + PostgreSQL | Schema-first ORM with migrations |
+| Database | Prisma + PostgreSQL | Schema-first ORM with db push (migrations optional) |
 | Auth | JWT | Token-based auth with role-based access |
 | Config | Dynamic config table | Runtime config via API, no restart needed |
 | Audit | BitacoraService | Non-blocking audit log for all mutations |
