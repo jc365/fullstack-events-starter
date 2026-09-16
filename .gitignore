@@ -33,6 +33,7 @@ node_modules/
 # ============================================
 # ARCHIVOS COMPILADOS / DE SALIDA
 # ============================================
+package-lock.json
 dist/
 build/
 coverage/
