@@ -50,9 +50,9 @@ npx tsc --noEmit 2>&1 | wc -l
 - `frontend/src/components/Layout.tsx`: `DEMO_USER_MAP` aún contiene roles director/actor/preselector. Se adapta en 3.4.
 - `frontend/src/pages/Dashboard.tsx`: usa `participations` de UserContext (eliminado) y endpoints `/castings`, `/rounds`. Marcado con TODO(3.4).
 - `frontend/src/App.test.tsx`: mockea endpoints `/participations`, `/castings`, `/rounds/` que ya no existen. Marcado con TODO(3.4).
-- `frontend/src/components/FileViewerModal.tsx`: imports comentados (submissionStatus, scoring) pendientes de equivalente genérico. Se resuelve en 3.3.
-- `frontend/src/components/SubmitFileModal.tsx`: pendiente de generalizar (quitar validaciones de video). Se resuelve en 3.3.
-- `frontend/src/hooks/useFileUrls.ts`: pendiente de generalizar. Se resuelve en 3.3.
+- `frontend/src/components/FileViewerModal.tsx`: imports comentados (submissionStatus, scoring) pendientes de equivalente genérico. ✅ Resuelto en 3.3b.2.
+- `frontend/src/components/SubmitFileModal.tsx`: pendiente de generalizar (quitar validaciones de video). ✅ Resuelto en 3.3b.1.
+- `frontend/src/hooks/useFileUrls.ts`: pendiente de generalizar. ✅ Resuelto en 3.3b.1.
 - `frontend/src/pages/CreateItem.tsx`: endpoints `/castings` y navigate `/castings` sin actualizar. Se adapta en 3.4.
 - `frontend/src/pages/Items.tsx`: endpoint `/castings` sin actualizar. Se adapta en 3.4.
 
@@ -65,3 +65,15 @@ arranque out-of-the-box en local:
 
 Obligatorio cambiarlos antes de desplegar a producción.
 Generar secreto: `openssl rand -hex 32`
+
+## SubmitFileModal — pestaña URL pendiente (3.3b.1)
+
+La pestaña URL del SubmitFileModal está deshabilitada por defecto
+(allowUrlInput=false). Cuando se activa, muestra un warning
+("URL externa no soportada todavía") con el input deshabilitado.
+
+El endpoint PATCH /items/:id con { fileUrl } está en el código
+pero es inalcanzable desde la UI. El backend de 3.3a solo soporta
+subida de fichero, no fileUrl externo.
+
+Se resolverá en 3.3c si añadimos fileUrl al PATCH de items.
