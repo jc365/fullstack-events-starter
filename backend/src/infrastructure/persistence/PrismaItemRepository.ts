@@ -21,7 +21,7 @@ export default class PrismaItemRepository implements IItemRepository {
     const records = await prisma.item.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return records.map((record: { id: string; title: string; description: string | null; status: string; createdBy: string; createdAt: Date; updatedAt: Date }) => this.toDomain(record));
+    return records.map((record) => this.toDomain(record));
   }
 
   async findByCreatedBy(createdBy: string): Promise<Item[]> {
@@ -29,7 +29,7 @@ export default class PrismaItemRepository implements IItemRepository {
       where: { createdBy },
       orderBy: { createdAt: 'desc' },
     });
-    return records.map((record: { id: string; title: string; description: string | null; status: string; createdBy: string; createdAt: Date; updatedAt: Date }) => this.toDomain(record));
+    return records.map((record) => this.toDomain(record));
   }
 
   async save(item: Item): Promise<void> {
@@ -43,12 +43,16 @@ export default class PrismaItemRepository implements IItemRepository {
         createdBy: item.createdBy,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
+        fileKey: item.fileKey,
+        mimeType: item.mimeType,
       },
       update: {
         title: item.title.getValue(),
         description: item.description,
         status: item.status,
         updatedAt: item.updatedAt,
+        fileKey: item.fileKey,
+        mimeType: item.mimeType,
       },
     });
   }
@@ -67,8 +71,20 @@ export default class PrismaItemRepository implements IItemRepository {
     createdBy: string;
     createdAt: Date;
     updatedAt: Date;
+    fileKey: string | null;
+    mimeType: string | null;
   }): Item {
     const title = ItemTitle.create(record.title);
-    return Item.create(title, record.description, record.createdBy, record.id);
+    return Item.reconstitute(
+      record.id,
+      title,
+      record.description,
+      record.status as 'active' | 'archived',
+      record.createdBy,
+      record.createdAt,
+      record.updatedAt,
+      record.fileKey,
+      record.mimeType
+    );
   }
 }

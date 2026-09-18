@@ -13,6 +13,7 @@ import GetItemUseCase from '../../../application/use-cases/items/GetItemUseCase'
 import ListItemsUseCase from '../../../application/use-cases/items/ListItemsUseCase';
 import UpdateItemUseCase from '../../../application/use-cases/items/UpdateItemUseCase';
 import DeleteItemUseCase from '../../../application/use-cases/items/DeleteItemUseCase';
+import UploadItemFileUseCase from '../../../application/use-cases/items/UploadItemFileUseCase';
 import { GetConfigUseCase, GetAllConfigUseCase, GetConfigByCategoryUseCase } from '../../../application/use-cases/config/GetConfigUseCase';
 import { UpsertConfigUseCase } from '../../../application/use-cases/config/UpsertConfigUseCase';
 import { DeleteConfigUseCase } from '../../../application/use-cases/config/DeleteConfigUseCase';
@@ -27,7 +28,8 @@ import { authMiddleware } from '../../middleware/auth';
 import type { AuthRequest } from '../../middleware/auth';
 import prisma from '../../persistence/prismaClient';
 import demoFileUpload from '../../storage/demoFileUpload';
-import { isR2Configured, getFileUrlAsync } from '../../storage/storageService';
+import { isR2Configured, getFileUrlAsync, getFileUrl } from '../../storage/storageService';
+import Item from '../../../domain/entities/Item';
 
 const LOG_LEVEL_NORMALIZE: Record<string, string> = {
   'warning': 'warn',
@@ -62,6 +64,7 @@ const getItemUseCase = new GetItemUseCase(itemRepository);
 const listItemsUseCase = new ListItemsUseCase(itemRepository);
 const updateItemUseCase = new UpdateItemUseCase(itemRepository, bitacoraService);
 const deleteItemUseCase = new DeleteItemUseCase(itemRepository, bitacoraService);
+const uploadItemFileUseCase = new UploadItemFileUseCase(itemRepository, bitacoraService);
 
 const configRepository = new PrismaConfigRepository();
 const getConfigUseCase = new GetConfigUseCase(configRepository);
@@ -226,20 +229,27 @@ router.delete('/users/:id', async (req, res) => {
 
 // ── Items ───────────────────────────────────
 
+function itemResponse(item: Item) {
+  return {
+    id: item.id,
+    title: item.title.getValue(),
+    description: item.description,
+    status: item.status,
+    createdBy: item.createdBy,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    fileKey: item.fileKey,
+    mimeType: item.mimeType,
+    fileUrl: item.fileKey ? getFileUrl(item.fileKey) : null,
+  };
+}
+
 router.get('/items', async (_req, res) => {
   requestLogger.info({}, 'GET /items');
 
   try {
     const items = await listItemsUseCase.execute();
-    res.json(items.map((i) => ({
-      id: i.id,
-      title: i.title.getValue(),
-      description: i.description,
-      status: i.status,
-      createdBy: i.createdBy,
-      createdAt: i.createdAt,
-      updatedAt: i.updatedAt,
-    })));
+    res.json(items.map(itemResponse));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     requestLogger.error({ error: message }, 'GET /items failed');
@@ -260,15 +270,7 @@ router.get('/items/:id', async (req, res) => {
       return;
     }
 
-    res.json({
-      id: item.id,
-      title: item.title.getValue(),
-      description: item.description,
-      status: item.status,
-      createdBy: item.createdBy,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    });
+    res.json(itemResponse(item));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     requestLogger.error({ error: message, id }, 'GET /items/:id failed');
@@ -289,18 +291,46 @@ router.post('/items', async (req: AuthRequest, res) => {
     const { title, description } = req.body;
     const item = await createItemUseCase.execute({ title, description }, userId);
 
-    res.status(201).json({
-      id: item.id,
-      title: item.title.getValue(),
-      description: item.description,
-      status: item.status,
-      createdBy: item.createdBy,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    });
+    res.status(201).json(itemResponse(item));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     requestLogger.error({ error: message }, 'POST /items failed');
+    res.status(400).json({ error: message });
+  }
+});
+
+router.post('/items/:id/file', demoFileUpload.single('file'), async (req: AuthRequest, res) => {
+  const { id } = req.params as { id: string };
+  requestLogger.info({ id }, 'POST /items/:id/file');
+
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: 'No file provided' });
+      return;
+    }
+
+    const item = await uploadItemFileUseCase.execute(id, {
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      originalname: req.file.originalname,
+      size: req.file.size,
+    }, userId);
+
+    res.json(itemResponse(item));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    if (message.includes('not found')) {
+      requestLogger.error({ error: message }, 'POST /items/:id/file: not found');
+      res.status(404).json({ error: message });
+      return;
+    }
+    requestLogger.error({ error: message, id }, 'POST /items/:id/file failed');
     res.status(400).json({ error: message });
   }
 });
@@ -319,15 +349,7 @@ router.patch('/items/:id', async (req: AuthRequest, res) => {
     const { title, description, status } = req.body;
     const item = await updateItemUseCase.execute(id, { title, description, status }, userId);
 
-    res.json({
-      id: item.id,
-      title: item.title.getValue(),
-      description: item.description,
-      status: item.status,
-      createdBy: item.createdBy,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    });
+    res.json(itemResponse(item));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     if (message.includes('not found')) {
