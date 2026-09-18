@@ -1,62 +1,61 @@
 /**
- * @file useVideoUrls.ts
+ * @file useFileUrls.ts
  * @module hooks
  *
- * Hook que precarga presigned URLs para submissions con videoKey (R2).
- * Si un video da error 403, regenera todas las URLs de la página.
+ * Hook que precarga URLs para ficheros con fileKey (R2 o local).
+ * Llama a GET /files/:key/url por cada fichero con fileKey.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import client from '../api/client';
 
-interface Submission {
+export interface FileRef {
   id: string;
-  videoUrl: string;
-  videoKey?: string | null;
+  fileKey?: string | null;
 }
 
-interface VideoUrlMap {
-  [submissionId: string]: string;
+interface FileUrlMap {
+  [fileId: string]: string;
 }
 
-export function useVideoUrls(submissions: Submission[]): {
-  videoUrls: VideoUrlMap;
+export function useFileUrls(files: FileRef[]): {
+  fileUrls: FileUrlMap;
   loading: boolean;
   refreshAll: () => void;
 } {
-  const [videoUrls, setVideoUrls] = useState<VideoUrlMap>({});
+  const [fileUrls, setFileUrls] = useState<FileUrlMap>({});
   const [loading, setLoading] = useState(false);
   const mountedRef = useRef(true);
 
-  const fetchUrls = useCallback(async (ids: string[]) => {
-    if (ids.length === 0) return;
+  const fetchUrls = useCallback(async (refs: Array<{ id: string; key: string }>) => {
+    if (refs.length === 0) return;
     setLoading(true);
 
     const results = await Promise.allSettled(
-      ids.map(async (id) => {
-        const res = await client.get(`/videos/${id}/url`);
+      refs.map(async ({ id, key }) => {
+        const res = await client.get(`/files/${key}/url`);
         return { id, url: res.data.url as string };
       })
     );
 
     if (!mountedRef.current) return;
 
-    const newUrls: VideoUrlMap = {};
+    const newUrls: FileUrlMap = {};
     for (const result of results) {
       if (result.status === 'fulfilled') {
         newUrls[result.value.id] = result.value.url;
       }
     }
-    setVideoUrls((prev) => ({ ...prev, ...newUrls }));
+    setFileUrls((prev) => ({ ...prev, ...newUrls }));
     setLoading(false);
   }, []);
 
   const refreshAll = useCallback(() => {
-    const r2Ids = submissions
-      .filter((s) => s.videoKey)
-      .map((s) => s.id);
-    fetchUrls(r2Ids);
-  }, [submissions, fetchUrls]);
+    const refs = files
+      .filter((f) => f.fileKey)
+      .map((f) => ({ id: f.id, key: f.fileKey as string }));
+    fetchUrls(refs);
+  }, [files, fetchUrls]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -64,20 +63,5 @@ export function useVideoUrls(submissions: Submission[]): {
     return () => { mountedRef.current = false; };
   }, [refreshAll]);
 
-  const handleError = useCallback((_submissionId: string) => {
-    // On 403, refresh all URLs
-    refreshAll();
-  }, [refreshAll]);
-
-  // Attach error handler to window for VideoPlayerModal to call
-  useEffect(() => {
-    const w = window as unknown as Record<string, unknown>;
-    w.__videoUrlError = handleError;
-    return () => {
-      const w = window as unknown as Record<string, unknown>;
-      delete w.__videoUrlError;
-    };
-  }, [handleError]);
-
-  return { videoUrls, loading, refreshAll };
+  return { fileUrls, loading, refreshAll };
 }

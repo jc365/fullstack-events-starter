@@ -1,21 +1,34 @@
+/**
+ * @file SubmitFileModal.tsx
+ * @module components
+ */
+
 import { useState, useRef, useEffect } from 'react';
 import client from '../api/client';
 
-interface SubmitVideoModalProps {
-  roundId: string;
+interface SubmitFileModalProps {
+  itemId: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  allowUrlInput?: boolean;
 }
 
 type Tab = 'url' | 'file';
 
-const ALLOWED_TYPES = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
-const MAX_SIZE = 100 * 1024 * 1024; // 100MB
+const ALLOWED_TYPES = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm',
+  'application/pdf',
+  'text/plain',
+  'application/json',
+];
+const MAX_SIZE = 50 * 1024 * 1024; // 50MB
 
-export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }: SubmitVideoModalProps) {
+export default function SubmitFileModal({ itemId, isOpen, onClose, onSuccess, allowUrlInput = false }: SubmitFileModalProps) {
   const [tab, setTab] = useState<Tab>('file');
-  const [videoUrl, setVideoUrl] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,7 +39,7 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
 
   useEffect(() => {
     if (isOpen) {
-      setVideoUrl('');
+      setExternalUrl('');
       setFile(null);
       setError('');
       setTab('file');
@@ -48,10 +61,10 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
 
   const validateFile = (f: File): string | null => {
     if (!ALLOWED_TYPES.includes(f.type)) {
-      return `Invalid file type: ${f.type || 'unknown'}. Accepted: MP4, WebM, OGG, MOV`;
+      return `Invalid file type: ${f.type || 'unknown'}`;
     }
     if (f.size > MAX_SIZE) {
-      return `File too large: ${(f.size / 1024 / 1024).toFixed(1)}MB. Max: 100MB`;
+      return `File too large: ${(f.size / 1024 / 1024).toFixed(1)}MB. Max: 50MB`;
     }
     return null;
   };
@@ -89,32 +102,32 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
     setError('');
 
     if (tab === 'url') {
-      const trimmed = videoUrl.trim();
+      const trimmed = externalUrl.trim();
       if (!trimmed) {
-        setError('Please enter a video URL');
+        setError('Please enter a URL');
         return;
       }
       setLoading(true);
       try {
-        await client.post('/submissions', { roundId, videoUrl: trimmed });
+        // TODO(3.3c): el backend aún no soporta fileUrl externo
+        await client.patch(`/items/${itemId}`, { fileUrl: trimmed });
         onSuccess();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to submit video');
+        setError(err instanceof Error ? err.message : 'Failed to submit URL');
       } finally {
         setLoading(false);
       }
     } else {
       if (!file) {
-        setError('Please select a video file');
+        setError('Please select a file');
         return;
       }
       setLoading(true);
       setUploadProgress(0);
       try {
         const formData = new FormData();
-        formData.append('roundId', roundId);
-        formData.append('video', file);
-        await client.post('/submissions', formData, {
+        formData.append('file', file);
+        await client.post(`/items/${itemId}/file`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           onUploadProgress: (e: { loaded: number; total?: number }) => {
             if (e.total) {
@@ -124,7 +137,7 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
         });
         onSuccess();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to upload video');
+        setError(err instanceof Error ? err.message : 'Failed to upload file');
       } finally {
         setLoading(false);
         setUploadProgress(null);
@@ -144,11 +157,11 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Submit video"
+        aria-label="Submit file"
         className="relative w-full max-w-md bg-surface border border-outline-variant/30 rounded-xl p-6 shadow-xl"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-headline-md text-headline-md text-on-surface">Submit Video</h2>
+          <h2 className="font-headline-md text-headline-md text-on-surface">Submit File</h2>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -172,18 +185,20 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
             <span className="material-symbols-outlined text-[18px] align-middle mr-1.5">upload_file</span>
             File Upload
           </button>
-          <button
-            type="button"
-            onClick={() => { setTab('url'); setError(''); }}
-            className={`flex-1 py-2.5 font-title-sm text-title-sm border-b-2 transition-colors ${
-              tab === 'url'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px] align-middle mr-1.5">link</span>
-            URL
-          </button>
+          {allowUrlInput && (
+            <button
+              type="button"
+              onClick={() => { setTab('url'); setError(''); }}
+              className={`flex-1 py-2.5 font-title-sm text-title-sm border-b-2 transition-colors ${
+                tab === 'url'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px] align-middle mr-1.5">link</span>
+              URL
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -191,12 +206,12 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
           {tab === 'file' && (
             <div>
               <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-2">
-                Video File
+                File
               </label>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="video/*"
+                accept="image/*,video/*,audio/*,application/pdf,text/plain,application/json"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -204,7 +219,7 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
               {file ? (
                 <div className="bg-surface-container border border-outline-variant/30 rounded-lg p-4">
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-primary text-[24px]">movie</span>
+                    <span className="material-symbols-outlined text-primary text-[24px]">insert_drive_file</span>
                     <div className="flex-1 min-w-0">
                       <p className="font-body-sm text-body-sm text-on-surface truncate">{file.name}</p>
                       <p className="text-xs text-on-surface-variant">{formatSize(file.size)}</p>
@@ -250,10 +265,10 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
                     cloud_upload
                   </span>
                   <p className="font-body-sm text-body-sm text-on-surface mb-1">
-                    Click or drag a video file here
+                    Click or drag a file here
                   </p>
                   <p className="text-xs text-on-surface-variant">
-                    MP4, WebM, OGG, MOV — Max 100MB
+                    Images, video, audio, PDF, text, JSON — Max 50MB
                   </p>
                 </div>
               )}
@@ -263,19 +278,23 @@ export default function SubmitVideoModal({ roundId, isOpen, onClose, onSuccess }
           {/* URL Tab */}
           {tab === 'url' && (
             <div>
+              <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded p-3 mb-3 text-sm text-amber-800 dark:text-amber-200">
+                URL externa no soportada todavía
+              </div>
               <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-2">
-                Video URL
+                URL
               </label>
               <input
                 ref={inputRef}
                 type="url"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://youtube.com/watch?v=..."
-                className="w-full bg-surface-container border-b-2 border-outline-variant/30 text-on-surface px-3 py-2 rounded focus:outline-none focus:border-primary transition-colors"
+                value={externalUrl}
+                onChange={(e) => setExternalUrl(e.target.value)}
+                placeholder="https://example.com/file.pdf"
+                disabled
+                className="w-full bg-surface-container border-b-2 border-outline-variant/30 text-on-surface px-3 py-2 rounded focus:outline-none focus:border-primary transition-colors opacity-50 cursor-not-allowed"
               />
               <p className="text-xs text-on-surface-variant mt-2">
-                Paste a YouTube, Vimeo, or direct video URL
+                Paste a direct file URL
               </p>
             </div>
           )}

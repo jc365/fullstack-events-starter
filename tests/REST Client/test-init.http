@@ -15,8 +15,14 @@ Content-Type: application/json
 @token = {{login98.response.body.token}}
 
 
-### GET items
+### GET todos los items
 GET {{backend}}/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### GET item concreto
+GET {{backend}}/items/item-demo-1
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
