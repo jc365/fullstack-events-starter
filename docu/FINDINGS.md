@@ -46,15 +46,15 @@ npx tsc --noEmit 2>&1 | wc -l
 
 ## Fase 3.2 — Deudas abiertas (frontend)
 
-- `frontend/src/pages/ItemDetail.tsx`: usa `isDirectorOf` / `getRoleInCasting` (u otros helpers de UserContext) que se han eliminado en 3.2. Rompe TS. Se adapta en 3.4.
-- `frontend/src/components/Layout.tsx`: `DEMO_USER_MAP` aún contiene roles director/actor/preselector. Se adapta en 3.4.
-- `frontend/src/pages/Dashboard.tsx`: usa `participations` de UserContext (eliminado) y endpoints `/castings`, `/rounds`. Marcado con TODO(3.4).
-- `frontend/src/App.test.tsx`: mockea endpoints `/participations`, `/castings`, `/rounds/` que ya no existen. Marcado con TODO(3.4).
+- ~~`frontend/src/pages/ItemDetail.tsx`: usa `isDirectorOf` / `getRoleInCasting`~~ ✅ Resuelto en 3.4.
+- ~~`frontend/src/components/Layout.tsx`: `DEMO_USER_MAP` aún contiene roles director/actor/preselector~~ ✅ Resuelto en 3.4.
+- ~~`frontend/src/pages/Dashboard.tsx`: usa `participations` de UserContext y endpoints `/castings`, `/rounds`~~ ✅ Resuelto en 3.4.
+- ~~`frontend/src/App.test.tsx`: mockea endpoints `/participations`, `/castings`, `/rounds/`~~ ✅ Resuelto en 3.4.
 - `frontend/src/components/FileViewerModal.tsx`: imports comentados (submissionStatus, scoring) pendientes de equivalente genérico. ✅ Resuelto en 3.3b.2.
 - `frontend/src/components/SubmitFileModal.tsx`: pendiente de generalizar (quitar validaciones de video). ✅ Resuelto en 3.3b.1.
 - `frontend/src/hooks/useFileUrls.ts`: pendiente de generalizar. ✅ Resuelto en 3.3b.1.
-- `frontend/src/pages/CreateItem.tsx`: endpoints `/castings` y navigate `/castings` sin actualizar. Se adapta en 3.4.
-- `frontend/src/pages/Items.tsx`: endpoint `/castings` sin actualizar. Se adapta en 3.4.
+- ~~`frontend/src/pages/CreateItem.tsx`: endpoints `/castings` y navigate `/castings` sin actualizar~~ ✅ Resuelto en 3.4.
+- ~~`frontend/src/pages/Items.tsx`: endpoint `/castings` sin actualizar~~ ✅ Resuelto en 3.4.
 
 ## Secretos placeholder (3.3.0c)
 
@@ -77,3 +77,25 @@ pero es inalcanzable desde la UI. El backend de 3.3a solo soporta
 subida de fichero, no fileUrl externo.
 
 Se resolverá en 3.3c si añadimos fileUrl al PATCH de items.
+
+## Fase 3.5 — Admin Panel
+
+### Creado
+
+- `Bitacora` entity (domain/entities/Bitacora.ts) — inmutable, factory `create()`
+- `IBitacoraRepository.findAll(options)` — paginación + filtros (userId, action, entityType, since, until)
+- `PrismaBitacoraRepository.findAll()` — skip/take, usa índices existentes
+- `adminMiddleware` (middleware/admin.ts) — verifica `user.role === 'admin'` vía DB lookup, retorna 403
+- `ListBitacoraUseCase` — delega a repositorio
+- `GET /admin/bitacora` — paginado, filtros, protegido con authMiddleware + adminMiddleware
+- `BitacoraPage` — tabla paginada, filtros (acción, entity type, fechas), resolución de userId vía UserCacheContext
+- `ConfigPage` — editor por categorías, secciones colapsables (localStorage), deep linking vía hash
+- `AdminSubNav` — sub-nav reutilizable con tabs Bitacora/Config
+- `AdminLayout` en App.tsx — AdminGuard + AdminSubNav + Outlet
+- Dashboard placeholder "Recent activity" eliminado
+
+### Deuda conocida
+
+- `adminMiddleware` hace un `findById` por cada request a `/admin/*`. Para alta frecuencia, considerar caché de roles.
+- `ConfigPage` no valida formato JSON en textarea — si el usuario ingresa JSON inválido, el backend rechaza silenciosamente.
+- No hay ruta `GET /bitacora` fuera del prefijo `/admin/` — la bitácora es exclusivamente admin.

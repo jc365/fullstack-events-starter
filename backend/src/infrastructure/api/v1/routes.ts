@@ -25,7 +25,9 @@ import BitacoraService from '../../logging/BitacoraService';
 import HashService from '../../security/HashService';
 import requestLogger from '../../logging/requestContext';
 import { authMiddleware } from '../../middleware/auth';
+import { adminMiddleware } from '../../middleware/admin';
 import type { AuthRequest } from '../../middleware/auth';
+import ListBitacoraUseCase from '../../../application/use-cases/bitacora/ListBitacoraUseCase';
 import prisma from '../../persistence/prismaClient';
 import demoFileUpload from '../../storage/demoFileUpload';
 import { isR2Configured, getFileUrlAsync, getFileUrl } from '../../storage/storageService';
@@ -72,6 +74,8 @@ const getAllConfigUseCase = new GetAllConfigUseCase(configRepository);
 const getConfigByCategoryUseCase = new GetConfigByCategoryUseCase(configRepository);
 const upsertConfigUseCase = new UpsertConfigUseCase(configRepository, bitacoraService);
 const deleteConfigUseCase = new DeleteConfigUseCase(configRepository, bitacoraService);
+
+const listBitacoraUseCase = new ListBitacoraUseCase(bitacoraRepository);
 
 // ============================================
 // Rate limiters
@@ -641,6 +645,50 @@ router.patch('/events/:id/fail', async (req, res) => {
     const message = error instanceof Error ? error.message : 'Internal server error';
     requestLogger.error({ error: message, id }, 'PATCH /events/:id/fail failed');
     res.status(400).json({ error: message });
+  }
+});
+
+// ── Admin routes (admin role required) ────────
+
+router.get('/admin/bitacora', adminMiddleware, async (req, res) => {
+  requestLogger.info({}, 'GET /admin/bitacora');
+  try {
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+    const userId = req.query.userId as string | undefined;
+    const action = req.query.action as string | undefined;
+    const entityType = req.query.entityType as string | undefined;
+    const since = req.query.since as string | undefined;
+    const until = req.query.until as string | undefined;
+
+    const result = await listBitacoraUseCase.execute({
+      page,
+      limit,
+      userId,
+      action,
+      entityType,
+      since,
+      until,
+    });
+
+    res.json({
+      data: result.data.map((e) => ({
+        id: e.id,
+        userId: e.userId,
+        action: e.action,
+        entityType: e.entityType,
+        entityId: e.entityId,
+        metadata: e.metadata,
+        createdAt: e.createdAt,
+      })),
+      total: result.total,
+      page,
+      limit,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    requestLogger.error({ error: message }, 'GET /admin/bitacora failed');
+    res.status(500).json({ error: message });
   }
 });
 

@@ -98,6 +98,7 @@ fullstack-events-starter/
 | Auth | JWT | Token-based auth with role-based access |
 | Config | Dynamic config table | Runtime config via API, no restart needed |
 | Audit | BitacoraService | Non-blocking audit log for all mutations |
+| Admin Panel | React | Bitacora viewer + config editor (admin role only) |
 | Frontend | React + Vite | SPA with routing, context state, themes |
 | Themes | Tailwind + CSS vars | 6 built-in themes (light, dark, ocean, forest, sunset, night) |
 | Workflows | FastAPI | Event-driven with webhook triggers |

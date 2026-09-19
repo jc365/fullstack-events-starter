@@ -118,17 +118,6 @@ export default function Dashboard() {
           </Link>
         </div>
       )}
-
-      {/* Recent activity placeholder */}
-      <div className="bg-surface border border-outline-variant/30 rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="material-symbols-outlined text-on-surface-variant">history</span>
-          <h2 className="font-title-sm text-title-sm text-on-surface">Recent Activity</h2>
-        </div>
-        <p className="text-on-surface-variant font-body-sm text-body-sm">
-          Coming soon — activity feed will appear here.
-        </p>
-      </div>
     </div>
   );
 }

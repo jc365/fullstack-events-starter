@@ -172,6 +172,20 @@ export default function Layout() {
               </Link>
             );
           })}
+          {user?.role === 'admin' && (
+            <Link
+              to="/admin/bitacora"
+              title={collapsed ? 'Admin' : undefined}
+              className={`flex items-center gap-4 py-3 transition-colors duration-200 active:scale-[0.98] ${collapsed ? 'justify-center px-3' : 'px-6'
+                } ${location.pathname.startsWith('/admin')
+                  ? 'text-primary border-l-2 border-primary bg-surface-container-high'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
+                }`}
+            >
+              <span className="material-symbols-outlined">admin_panel_settings</span>
+              {!collapsed && <span>Admin</span>}
+            </Link>
+          )}
         </div>
 
         {/* Bottom Section */}
