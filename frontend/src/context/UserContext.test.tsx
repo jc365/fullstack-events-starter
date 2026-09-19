@@ -1,3 +1,8 @@
+/**
+ * @file UserContext.test.tsx
+ * @module tests
+ */
+
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserProvider, useUser } from './UserContext';
@@ -11,12 +16,12 @@ vi.mock('../api/client', () => ({
 import client from '../api/client';
 
 function TestComponent() {
-  const { user, participations, isLoading, refreshUser } = useUser();
+  const { user, isLoading, refreshUser } = useUser();
   return (
     <div>
       <div data-testid="loading">{isLoading.toString()}</div>
       <div data-testid="user">{user ? user.name : 'null'}</div>
-      <div data-testid="participations">{participations.length}</div>
+      <div data-testid="role">{user ? user.role : 'none'}</div>
       <button onClick={refreshUser}>Refresh</button>
     </div>
   );
@@ -28,7 +33,7 @@ describe('UserContext', () => {
     localStorage.clear();
   });
 
-  it('refreshUser carga usuario y participaciones', async () => {
+  it('refreshUser carga usuario', async () => {
     localStorage.setItem('token', 'test-token');
     localStorage.setItem('userId', 'user-123');
 
@@ -36,9 +41,9 @@ describe('UserContext', () => {
     mockGet.mockImplementation((url: string | object) => {
       const urlStr = String(url);
       if (urlStr.includes('/users/user-123')) {
-        return Promise.resolve({ data: { id: 'user-123', name: 'Test User', email: 'test@example.com' } });
+        return Promise.resolve({ data: { id: 'user-123', name: 'Test User', email: 'test@example.com', role: 'admin' } });
       }
-      return Promise.resolve({ data: [{ type: 'casting', castingId: 'c1', role: 'director' }] });
+      return Promise.resolve({ data: [] });
     });
 
     await act(async () => {
@@ -51,7 +56,7 @@ describe('UserContext', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('user')).toHaveTextContent('Test User');
-      expect(screen.getByTestId('participations')).toHaveTextContent('1');
+      expect(screen.getByTestId('role')).toHaveTextContent('admin');
     });
   });
 
@@ -66,12 +71,11 @@ describe('UserContext', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('user')).toHaveTextContent('null');
-      expect(screen.getByTestId('participations')).toHaveTextContent('0');
+      expect(screen.getByTestId('role')).toHaveTextContent('none');
     });
   });
 
-  it('Polling refresca participaciones cada 30 segundos', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it('refreshUser actualiza el usuario', async () => {
     localStorage.setItem('token', 'test-token');
     localStorage.setItem('userId', 'user-123');
 
@@ -79,7 +83,7 @@ describe('UserContext', () => {
     mockGet.mockImplementation((url: string | object) => {
       const urlStr = String(url);
       if (urlStr.includes('/users/user-123')) {
-        return Promise.resolve({ data: { id: 'user-123', name: 'Test User', email: 'test@example.com' } });
+        return Promise.resolve({ data: { id: 'user-123', name: 'Test User', email: 'test@example.com', role: 'user' } });
       }
       return Promise.resolve({ data: [] });
     });
@@ -96,21 +100,12 @@ describe('UserContext', () => {
       expect(screen.getByTestId('user')).toHaveTextContent('Test User');
     });
 
-    const initialCallCount = mockGet.mock.calls.filter(
-      (call) => String(call[0]).includes('/participations')
-    ).length;
-
     await act(async () => {
-      vi.advanceTimersByTime(31_000);
+      screen.getByText('Refresh').click();
     });
 
     await waitFor(() => {
-      const newCallCount = mockGet.mock.calls.filter(
-        (call) => String(call[0]).includes('/participations')
-      ).length;
-      expect(newCallCount).toBeGreaterThan(initialCallCount);
+      expect(screen.getByTestId('user')).toHaveTextContent('Test User');
     });
-
-    vi.useRealTimers();
   });
 });

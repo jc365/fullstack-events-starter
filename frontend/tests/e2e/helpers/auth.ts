@@ -1,6 +1,6 @@
 import { Page, expect } from '@playwright/test';
 
-export async function loginAs(page: Page, role: 'director' | 'actor' | 'preselector') {
+export async function loginAs(page: Page, role: 'admin' | 'user' | 'guest') {
   await page.goto('/dashboard');
 
   // Wait for the sidebar to be visible
@@ -28,15 +28,15 @@ export async function loginAs(page: Page, role: 'director' | 'actor' | 'preselec
   const isEnabled = toggleClasses.includes('bg-primary-container');
 
   if (!isEnabled) {
-    // Click the toggle to enable demo mode — this logs in with default role (director)
+    // Click the toggle to enable demo mode — this logs in with default role (admin)
     await toggleContainer.click();
     // Wait for the role selector to appear
-    const roleSelect = page.locator('select').filter({ has: page.locator('option[value="director"]') });
+    const roleSelect = page.locator('select').filter({ has: page.locator('option[value="admin"]') });
     await roleSelect.waitFor({ state: 'visible', timeout: 5000 });
   }
 
   // Select the desired role — this triggers re-authentication
-  const roleSelect = page.locator('select').filter({ has: page.locator('option[value="director"]') });
+  const roleSelect = page.locator('select').filter({ has: page.locator('option[value="admin"]') });
   await roleSelect.waitFor({ state: 'visible', timeout: 5000 });
 
   // Check current selection

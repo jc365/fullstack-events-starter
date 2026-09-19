@@ -1,94 +1,61 @@
+/**
+ * @file ItemDetail.tsx
+ * @module pages
+ */
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import client from '../api/client';
 import { useUser } from '../context/UserContext';
-import { useUserCache } from '../context/UserCacheContext';
 import { useToast } from '../context/ToastContext';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { getRoleBadge } from '../utils/roleConfig';
+import SubmitFileModal from '../components/SubmitFileModal';
+import FileViewerModal from '../components/FileViewerModal';
 
-interface Participant {
-  userId: string;
-  role: string;
-}
-
-interface Round {
-  id: string;
-  number: number;
-  participants: { actorId: string; role: string }[];
-  submissions?: { id: string; status: string }[];
-}
-
-interface Casting {
+interface Item {
   id: string;
   title: string;
-  description: string;
-  participants: Participant[];
-  rounds: Round[];
+  description: string | null;
+  status: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  fileKey: string | null;
+  mimeType: string | null;
+  fileUrl: string | null;
 }
 
-export default function CastingDetail() {
-  const { castingId } = useParams<{ castingId: string }>();
+export default function ItemDetail() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getRoleInCasting, isDirectorOf } = useUser();
-  const { ensureUser } = useUserCache();
+  const { isAdmin } = useUser();
   const { showSuccess, showError } = useToast();
-  const [casting, setCasting] = useState<Casting | null>(null);
+  const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [submissionCounts, setSubmissionCounts] = useState<Record<string, { total: number; pending: number; reviewed: number; selected: number; rejected: number }>>({});
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showFileViewer, setShowFileViewer] = useState(false);
 
-  const role = castingId ? getRoleInCasting(castingId) : null;
-  const isDirector = castingId ? isDirectorOf(castingId) : false;
-
-  const fetchCasting = () => {
-    if (!castingId) return;
-    client.get(`/items/${castingId}`)
-      .then((res) => setCasting(res.data))
+  const fetchItem = () => {
+    if (!id) return;
+    client.get(`/items/${id}`)
+      .then((res) => setItem(res.data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchCasting(); }, [castingId]);
-
-  useEffect(() => {
-    if (!casting) return;
-    casting.participants.forEach((p) => ensureUser(p.userId));
-  }, [casting, ensureUser]);
-
-  // TODO(3.4): eliminar lógica de rounds
-  useEffect(() => {
-    if (!casting) return;
-    casting.rounds.forEach((round) => {
-      client.get(`/rounds/${round.id}`)
-        .then((res) => {
-          const data = res.data as { submissions?: { id: string; status: string }[] };
-          const subs = data.submissions ?? [];
-          setSubmissionCounts((prev) => ({
-            ...prev,
-            [round.id]: {
-              total: subs.length,
-              pending: subs.filter((s) => s.status === 'pending').length,
-              reviewed: subs.filter((s) => s.status === 'reviewed').length,
-              selected: subs.filter((s) => s.status === 'selected').length,
-              rejected: subs.filter((s) => s.status === 'rejected').length,
-            },
-          }));
-        })
-        .catch(() => {});
-    });
-  }, [casting]);
+  useEffect(() => { fetchItem(); }, [id]);
 
   const handleDelete = async () => {
-    if (!castingId) return;
+    if (!id) return;
     try {
-      await client.delete(`/items/${castingId}`);
-      showSuccess('Casting deleted');
+      await client.delete(`/items/${id}`);
+      showSuccess('Item deleted');
       navigate('/dashboard');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to delete casting');
+      showError(err instanceof Error ? err.message : 'Failed to delete item');
     }
   };
 
@@ -96,18 +63,20 @@ export default function CastingDetail() {
     return (
       <div className="flex items-center gap-3 text-on-surface-variant">
         <span className="material-symbols-outlined animate-spin">progress_activity</span>
-        Loading casting...
+        Loading item...
       </div>
     );
   }
 
-  if (error || !casting) {
+  if (error || !item) {
     return (
       <div className="bg-error-container text-on-error-container p-4 rounded-xl">
-        Error: {error || 'Casting not found'}
+        Error: {error || 'Item not found'}
       </div>
     );
   }
+
+  const canEdit = isAdmin();
 
   return (
     <div>
@@ -119,65 +88,124 @@ export default function CastingDetail() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="font-display-lg text-display-lg text-on-background">
-              {casting.title}
+              {item.title}
             </h1>
-            <p className="text-on-surface-variant mt-2 font-body-lg text-lg leading-relaxed">
-              {casting.description}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {role && (
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${getRoleBadge(role).className}`}>
-                <span>{getRoleBadge(role).icon}</span>
-                <span className="font-label-caps text-label-caps uppercase">
-                  Your role: {getRoleBadge(role).label}
-                </span>
+            {item.description && (
+              <p className="text-on-surface-variant mt-2 font-body-lg text-lg leading-relaxed">
+                {item.description}
+              </p>
+            )}
+            <div className="flex items-center gap-3 mt-3">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-label-caps border ${
+                item.status === 'active'
+                  ? 'bg-[var(--color-green,#22c55e)]/10 text-[var(--color-green,#22c55e)] border-[var(--color-green,#22c55e)]/30'
+                  : 'bg-surface-container text-on-surface-variant border-outline-variant/30'
+              }`}>
+                {item.status}
               </span>
-            )}
-            {isDirector && (
-              <>
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  className="p-2 rounded hover:bg-surface-container transition-colors"
-                  aria-label="Edit item"
-                >
-                  <span className="material-symbols-outlined text-on-surface-variant">edit</span>
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="p-2 rounded hover:bg-error-container/30 transition-colors"
-                  title="Delete casting"
-                >
-                  <span className="material-symbols-outlined text-error">delete</span>
-                </button>
-              </>
-            )}
+              <span className="text-on-surface-variant font-body-sm text-body-sm">
+                Created {new Date(item.createdAt).toLocaleDateString()}
+              </span>
+            </div>
           </div>
+          {canEdit && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="p-2 rounded hover:bg-surface-container transition-colors"
+                aria-label="Edit item"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant">edit</span>
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 rounded hover:bg-error-container/30 transition-colors"
+                title="Delete item"
+              >
+                <span className="material-symbols-outlined text-error">delete</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* TODO(3.4): eliminar lógica de rounds */}
-      {/* <div className="bg-surface border border-outline-variant/30 rounded-xl p-6">
-        ... rounds block ...
-      </div> */}
+      {/* File section */}
+      <div className="bg-surface border border-outline-variant/30 rounded-xl p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-title-sm text-title-sm text-on-surface">Attached File</h2>
+          {canEdit && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="inline-flex items-center gap-2 py-2 px-4 bg-primary-container text-on-primary-container font-title-sm text-title-sm rounded hover:bg-primary transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">upload_file</span>
+              {item.fileKey ? 'Replace File' : 'Upload File'}
+            </button>
+          )}
+        </div>
+        {item.fileKey ? (
+          <div className="flex items-center gap-4">
+            <span className="material-symbols-outlined text-primary text-[32px]">insert_drive_file</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-body-sm text-body-sm text-on-surface truncate">{item.fileKey.split('/').pop()}</p>
+              <p className="text-xs text-on-surface-variant">{item.mimeType || 'Unknown type'}</p>
+            </div>
+            <button
+              onClick={() => setShowFileViewer(true)}
+              className="inline-flex items-center gap-2 py-2 px-4 border border-outline-variant/50 text-on-surface-variant font-title-sm text-title-sm rounded hover:bg-surface-container transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">visibility</span>
+              View File
+            </button>
+          </div>
+        ) : (
+          <p className="text-on-surface-variant font-body-sm text-body-sm">
+            No file attached yet.
+          </p>
+        )}
+      </div>
 
       {/* Edit Modal */}
       {showEditModal && (
-        <EditCastingModal
-          casting={casting}
+        <EditItemModal
+          item={item}
           onClose={() => setShowEditModal(false)}
           onSaved={() => {
             setShowEditModal(false);
-            fetchCasting();
-            showSuccess('Casting updated');
+            fetchItem();
+            showSuccess('Item updated');
           }}
         />
       )}
 
+      {/* Upload Modal */}
+      <SubmitFileModal
+        itemId={item.id}
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={() => {
+          setShowUploadModal(false);
+          fetchItem();
+          showSuccess('File uploaded');
+        }}
+      />
+
+      {/* File Viewer Modal */}
+      <FileViewerModal
+        isOpen={showFileViewer}
+        file={item.fileKey ? {
+          key: item.fileKey,
+          mimeType: item.mimeType || 'application/octet-stream',
+          url: item.fileUrl,
+          name: item.fileKey.split('/').pop(),
+        } : null}
+        onClose={() => setShowFileViewer(false)}
+      />
+
       <ConfirmDialog
         isOpen={showDeleteConfirm}
-        title="Delete Casting"
-        message={`Are you sure you want to delete "${casting.title}"? This will permanently delete all rounds and submissions.`}
+        title="Delete Item"
+        message={`Are you sure you want to delete "${item.title}"?`}
         confirmLabel="Delete"
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteConfirm(false)}
@@ -186,17 +214,17 @@ export default function CastingDetail() {
   );
 }
 
-function EditCastingModal({
-  casting,
+function EditItemModal({
+  item,
   onClose,
   onSaved,
 }: {
-  casting: Casting;
+  item: Item;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [title, setTitle] = useState(casting.title);
-  const [description, setDescription] = useState(casting.description);
+  const [title, setTitle] = useState(item.title);
+  const [description, setDescription] = useState(item.description ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -208,13 +236,13 @@ function EditCastingModal({
     setSaving(true);
     setError('');
     try {
-      await client.put(`/items/${casting.id}`, {
+      await client.put(`/items/${item.id}`, {
         title: title.trim(),
         description: description.trim(),
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update casting');
+      setError(err instanceof Error ? err.message : 'Failed to update item');
     } finally {
       setSaving(false);
     }
@@ -223,7 +251,7 @@ function EditCastingModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Edit item">
       <div className="bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/30 w-full max-w-md mx-4 p-6">
-        <h2 className="font-headline-md text-headline-md text-on-surface mb-4">Edit Casting</h2>
+        <h2 className="font-headline-md text-headline-md text-on-surface mb-4">Edit Item</h2>
         <div className="flex flex-col gap-4">
           <div>
             <label className="font-label-caps text-label-caps text-on-surface-variant uppercase mb-2 block">Title</label>

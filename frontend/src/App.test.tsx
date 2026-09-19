@@ -1,3 +1,8 @@
+/**
+ * @file App.test.tsx
+ * @module tests
+ */
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from './App';
@@ -18,17 +23,10 @@ function setupUserMocks() {
   mockedGet.mockImplementation((url: string | object) => {
     const urlStr = String(url);
     if (urlStr.includes('/users/user-1')) {
-      return Promise.resolve({ data: { id: 'user-1', name: 'Test User', email: 'test@example.com' } });
+      return Promise.resolve({ data: { id: 'user-1', name: 'Test User', email: 'test@example.com', role: 'admin' } });
     }
-    if (urlStr.includes('/participations')) {
-      return Promise.resolve({ data: [{ type: 'casting', castingId: 'c1', role: 'director' }] });
-    }
-    if (urlStr.includes('/castings')) {
-      return Promise.resolve({ data: [{ id: 'c1', title: 'Test Casting', description: 'Desc', participants: [{ userId: 'user-1', role: 'director' }] }] });
-    }
-    // TODO(3.4): adaptar Dashboard a Items
-    if (urlStr.includes('/rounds/')) {
-      return Promise.resolve({ data: { id: 'r1', number: 1, castingId: 'c1', participants: [], submissions: [] } });
+    if (urlStr.includes('/items')) {
+      return Promise.resolve({ data: [{ id: 'item-1', title: 'Test Item', description: 'Desc', status: 'active', createdBy: 'user-1', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
     }
     return Promise.resolve({ data: [] });
   });
@@ -42,7 +40,7 @@ describe('App', () => {
 
   it('renders without crashing', () => {
     render(<App />);
-    expect(screen.getAllByText('Slate Casting').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Events Starter').length).toBeGreaterThan(0);
   });
 
   it('shows login form when not authenticated', () => {
@@ -105,11 +103,11 @@ describe('App', () => {
       render(<App />);
 
       await waitFor(() => {
-        expect(screen.getByText('Your castings and participations.')).toBeInTheDocument();
+        expect(screen.getByText('Your items at a glance.')).toBeInTheDocument();
       });
     });
 
-    it('loads participations after login', async () => {
+    it('loads items after login', async () => {
       localStorage.setItem('token', 'test-token');
       localStorage.setItem('userId', 'user-1');
       setupUserMocks();
@@ -118,7 +116,7 @@ describe('App', () => {
 
       await waitFor(() => {
         expect(mockedGet).toHaveBeenCalledWith(
-          expect.stringContaining('/participations'),
+          expect.stringContaining('/items'),
         );
       });
     });

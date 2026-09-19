@@ -12,10 +12,10 @@ const navItems = [
 ];
 
 const DEMO_USER_MAP: Record<string, string> = {
-  'director@demo.com': 'director',
-  'actor1@demo.com': 'actor',
-  'actor2@demo.com': 'actor',
-  'preselector@demo.com': 'preselector',
+  'admin@demo.com': 'admin',
+  'user1@demo.com': 'user',
+  'user2@demo.com': 'user',
+  'guest@demo.com': 'guest',
 };
 
 export default function Layout() {
@@ -26,7 +26,7 @@ export default function Layout() {
 
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true');
   const [demoEnabled, setDemoEnabled] = useState(() => !!localStorage.getItem('token'));
-  const [selectedRole, setSelectedRole] = useState('director');
+  const [selectedRole, setSelectedRole] = useState('admin');
   const [demoError, setDemoError] = useState('');
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
@@ -42,9 +42,9 @@ export default function Layout() {
     if (token) {
       refreshUser();
     } else {
-      setSelectedRole('director');
+      setSelectedRole('admin');
       setDemoEnabled(true);
-      handleDemoLogin('director');
+      handleDemoLogin('admin');
     }
     setInitialLoadDone(true);
   }, []);
@@ -60,7 +60,7 @@ export default function Layout() {
 
     if (isDemoUser) {
       setDemoEnabled(true);
-      const role = DEMO_USER_MAP[user.email] || 'director';
+      const role = DEMO_USER_MAP[user.email] || 'admin';
       setSelectedRole(role);
     } else {
       setDemoEnabled(false);
@@ -142,10 +142,10 @@ export default function Layout() {
             {!collapsed && (
               <div className="overflow-hidden">
                 <h2 className="font-headline-md text-headline-md text-primary font-bold tracking-tight whitespace-nowrap">
-                  Slate Casting
+                  Events Starter
                 </h2>
                 <p className="font-label-caps text-label-caps text-on-surface-variant uppercase mt-1 whitespace-nowrap">
-                  Directorial Suite
+                  Admin Panel
                 </p>
               </div>
             )}
@@ -245,9 +245,9 @@ export default function Layout() {
                   onChange={(e) => handleRoleChange(e.target.value)}
                   className="block mt-2 w-full bg-surface-container-high text-on-surface border border-outline-variant/30 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-primary"
                 >
-                  <option value="director">Director</option>
-                  <option value="actor">Actor</option>
-                  <option value="preselector">Preselector</option>
+                  <option value="admin">Admin</option>
+                  <option value="user">User</option>
+                  <option value="guest">Guest</option>
                 </select>
               )}
             </div>
