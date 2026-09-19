@@ -66,10 +66,10 @@ class TestEventQueueIntegration:
         fail_wf = MagicMock()
         fail_wf.safe_execute = AsyncMock(return_value=WorkflowResult(success=False, message="video not found"))
 
-        p = EventPoller({"submission.created": fail_wf})
+        p = EventPoller({"item.created": fail_wf})
 
         events_db = [
-            {"id": "evt-2", "eventType": "submission.created", "payload": {"submission_id": "sub-1"}, "status": "pending"},
+            {"id": "evt-2", "eventType": "item.created", "payload": {"item_id": "item-1"}, "status": "pending"},
         ]
 
         fake_client = AsyncMock()

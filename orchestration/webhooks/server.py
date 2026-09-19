@@ -25,7 +25,7 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException
 from pydantic import BaseModel
 
 from orchestration.workflows.base import Event, WorkflowResult
-from orchestration.workflows.video_processor import VideoProcessorWorkflow
+from orchestration.workflows.file_processor import FileProcessorWorkflow
 from orchestration.workflows.cleanup import CleanupWorkflow
 from orchestration.workflows.notifications import NotificationWorkflow
 from orchestration.workflows.r2_monitor import R2MonitorWorkflow
@@ -37,9 +37,9 @@ from orchestration.event_poller import EventPoller
 logger = logging.getLogger(__name__)
 
 WORKFLOWS = {
-    "submission.created": VideoProcessorWorkflow(),
+    "item.created": FileProcessorWorkflow(),
     "cleanup.daily": CleanupWorkflow(),
-    "review.completed": NotificationWorkflow(),
+    "item.reviewed": NotificationWorkflow(),
     "r2.monitor": R2MonitorWorkflow(),
     "test.email": TestEmailWorkflow(),
 }
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
     logger.info("Orchestration server stopped")
 
 
-app = FastAPI(title="Castant Orchestration", lifespan=lifespan)
+app = FastAPI(title="Events Starter Orchestration", lifespan=lifespan)
 
 
 class WebhookPayload(BaseModel):

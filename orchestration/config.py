@@ -17,7 +17,7 @@ SEND_TOKEN = os.getenv("SEND_TOKEN", "")
 
 UPLOADS_DIR = Path(os.getenv(
     "UPLOADS_DIR",
-    str(Path(__file__).resolve().parent.parent / "backend" / "uploads" / "videos"),
+    str(Path(__file__).resolve().parent.parent / "backend" / "uploads" / "files"),
 ))
 
 THUMBNAILS_DIR = UPLOADS_DIR.parent / "thumbnails"

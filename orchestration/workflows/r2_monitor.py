@@ -122,13 +122,13 @@ class R2MonitorWorkflow(BaseWorkflow):
 
     async def _send_alert(self, email: str, size_gb: float, threshold_gb: float) -> None:
         """Send alert email about R2 threshold exceeded."""
-        subject = f"⚠️ Castant R2 Storage Alert: {size_gb:.2f} GB used"
+        subject = f"R2 Storage Alert: {size_gb:.2f} GB used"
         body = (
             f"Alert: Cloudflare R2 bucket has exceeded the configured threshold.\n\n"
             f"Current usage: {size_gb:.2f} GB\n"
             f"Threshold: {threshold_gb:.2f} GB\n\n"
             f"Please review and clean up old files if necessary.\n\n"
-            f"— Castant Orchestrator"
+            f"— Events Starter Orchestrator"
         )
 
         email_client = EmailClient()

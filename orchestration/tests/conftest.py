@@ -26,13 +26,12 @@ def sample_review_event():
     from orchestration.workflows.base import Event
 
     return Event(
-        type="review.completed",
+        type="item.reviewed",
         payload={
-            "submission_id": "sub-test-001",
-            "actor_id": "usr-actor-001",
-            "director_id": "usr-director-001",
+            "item_id": "item-test-001",
+            "user_id": "usr-user-001",
             "score": 8,
-            "feedback": "Great performance!",
+            "feedback": "Great work!",
         },
         event_id="evt-review-001",
     )
@@ -51,7 +50,7 @@ def sample_cleanup_event():
 
 @pytest.fixture
 def tmp_uploads(tmp_path):
-    uploads = tmp_path / "uploads" / "videos"
+    uploads = tmp_path / "uploads" / "files"
     uploads.mkdir(parents=True)
     thumbnails = tmp_path / "uploads" / "thumbnails"
     thumbnails.mkdir(parents=True)

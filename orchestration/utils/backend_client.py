@@ -40,17 +40,17 @@ async def close_client():
         _client = None
 
 
-async def patch_submission_metadata(submission_id: str, data: dict[str, Any]) -> dict:
+async def patch_item_metadata(item_id: str, data: dict[str, Any]) -> dict:
     client = await get_client()
-    resp = await client.patch(f"/submissions/{submission_id}/metadata", json=data)
+    resp = await client.patch(f"/items/{item_id}", json=data)
     resp.raise_for_status()
-    logger.info("Updated metadata for submission %s", submission_id)
+    logger.info("Updated metadata for item %s", item_id)
     return resp.json()
 
 
-async def get_submission(submission_id: str) -> dict:
+async def get_item(item_id: str) -> dict:
     client = await get_client()
-    resp = await client.get(f"/submissions/{submission_id}")
+    resp = await client.get(f"/items/{item_id}")
     resp.raise_for_status()
     return resp.json()
 
@@ -58,13 +58,6 @@ async def get_submission(submission_id: str) -> dict:
 async def get_user(user_id: str) -> dict:
     client = await get_client()
     resp = await client.get(f"/users/{user_id}")
-    resp.raise_for_status()
-    return resp.json()
-
-
-async def get_round(round_id: str) -> dict:
-    client = await get_client()
-    resp = await client.get(f"/rounds/{round_id}")
     resp.raise_for_status()
     return resp.json()
 

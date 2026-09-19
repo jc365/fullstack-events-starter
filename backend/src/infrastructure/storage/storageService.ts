@@ -4,7 +4,7 @@
  *
  * Servicio de almacenamiento unificado.
  * Si Cloudflare R2 está configurado, almacena en R2 (bucket privado con presigned URLs).
- * Si no, usa almacenamiento local en backend/uploads/videos/.
+ * Si no, usa almacenamiento local en backend/uploads/files/.
  */
 
 import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
@@ -17,7 +17,7 @@ import r2Client from './r2Client';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const LOCAL_UPLOADS_DIR = path.resolve(__dirname, '../../../uploads/videos');
+const LOCAL_UPLOADS_DIR = path.resolve(__dirname, '../../../uploads/files');
 const R2_BUCKET = process.env.CLOUDFLARE_R2_BUCKET;
 const R2_FOLDER = process.env.CLOUDFLARE_R2_TARGET_FOLDER || 'uploads/files';
 const PRESIGNED_URL_EXPIRY = 3600; // 1 hour
@@ -60,7 +60,7 @@ export function getFileUrl(key: string, expiresIn: number = PRESIGNED_URL_EXPIRY
   if (isR2Configured()) {
     return key;
   }
-  return `/uploads/videos/${key}`;
+  return `/uploads/files/${key}`;
 }
 
 export async function getFileUrlAsync(key: string, expiresIn: number = PRESIGNED_URL_EXPIRY): Promise<string> {
@@ -68,7 +68,7 @@ export async function getFileUrlAsync(key: string, expiresIn: number = PRESIGNED
     const command = new GetObjectCommand({ Bucket: R2_BUCKET, Key: key });
     return getSignedUrl(r2Client, command, { expiresIn });
   }
-  return `/uploads/videos/${key}`;
+  return `/uploads/files/${key}`;
 }
 
 export async function deleteFile(key: string): Promise<void> {

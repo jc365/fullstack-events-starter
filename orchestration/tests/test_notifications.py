@@ -4,7 +4,6 @@
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from orchestration.workflows.base import Event, WorkflowResult
 from orchestration.workflows.notifications import NotificationWorkflow
 
@@ -17,14 +16,14 @@ def workflow():
 class TestNotificationWorkflow:
     @pytest.mark.asyncio
     async def test_event_type(self, workflow):
-        assert workflow.event_type == "review.completed"
+        assert workflow.event_type == "item.reviewed"
 
     @pytest.mark.asyncio
-    async def test_missing_actor_id(self, workflow):
-        event = Event(type="review.completed", payload={})
+    async def test_missing_user_id(self, workflow):
+        event = Event(type="item.reviewed", payload={})
         result = await workflow.execute(event)
         assert not result.success
-        assert "actor_id is required" in result.message
+        assert "user_id is required" in result.message
 
     @pytest.mark.asyncio
     async def test_user_fetch_failure(self, workflow, monkeypatch):
@@ -34,8 +33,8 @@ class TestNotificationWorkflow:
         monkeypatch.setattr("orchestration.workflows.notifications.get_user", fail_get_user)
 
         event = Event(
-            type="review.completed",
-            payload={"actor_id": "usr-001", "score": 5},
+            type="item.reviewed",
+            payload={"user_id": "usr-001", "score": 5},
         )
         result = await workflow.execute(event)
         assert not result.success
@@ -44,13 +43,13 @@ class TestNotificationWorkflow:
     @pytest.mark.asyncio
     async def test_no_email(self, workflow, monkeypatch):
         async def fake_get_user(uid):
-            return {"name": "Actor", "email": ""}
+            return {"name": "User", "email": ""}
 
         monkeypatch.setattr("orchestration.workflows.notifications.get_user", fake_get_user)
 
         event = Event(
-            type="review.completed",
-            payload={"actor_id": "usr-001", "score": 5},
+            type="item.reviewed",
+            payload={"user_id": "usr-001", "score": 5},
         )
         result = await workflow.execute(event)
         assert not result.success
@@ -62,22 +61,21 @@ class TestNotificationWorkflow:
             return {"name": "Juan Perez", "email": "juan@test.com"}
 
         monkeypatch.setattr("orchestration.workflows.notifications.get_user", fake_get_user)
-        monkeypatch.setattr("orchestration.workflows.notifications.SMTP_HOST", "")
 
         event = Event(
-            type="review.completed",
+            type="item.reviewed",
             payload={
-                "submission_id": "sub-001",
-                "actor_id": "usr-001",
+                "item_id": "item-001",
+                "user_id": "usr-001",
                 "score": 8,
-                "feedback": "Excelente trabajo",
+                "feedback": "Great work!",
             },
         )
 
         result = await workflow.execute(event)
         assert result.success
         assert result.data["email"] == "juan@test.com"
-        assert result.data["actor_name"] == "Juan Perez"
+        assert result.data["user_name"] == "Juan Perez"
 
     @pytest.mark.asyncio
     async def test_email_content(self, workflow, monkeypatch):
@@ -86,22 +84,22 @@ class TestNotificationWorkflow:
         async def fake_get_user(uid):
             return {"name": "Maria", "email": "maria@test.com"}
 
-        def fake_send_email(to, subject, body):
+        async def fake_send_email(self_email, to, subject, body):
             captured["to"] = to
             captured["subject"] = subject
             captured["body"] = body
+            return True
 
         monkeypatch.setattr("orchestration.workflows.notifications.get_user", fake_get_user)
-        monkeypatch.setattr("orchestration.workflows.notifications._send_email", fake_send_email)
-        monkeypatch.setattr("orchestration.workflows.notifications.SMTP_HOST", "")
+        monkeypatch.setattr("orchestration.utils.email_client.EmailClient.send_email", fake_send_email)
 
         event = Event(
-            type="review.completed",
+            type="item.reviewed",
             payload={
-                "submission_id": "sub-42",
-                "actor_id": "usr-001",
+                "item_id": "item-42",
+                "user_id": "usr-001",
                 "score": 5,
-                "feedback": "Buen desempeno",
+                "feedback": "Good job",
             },
         )
 
@@ -109,10 +107,10 @@ class TestNotificationWorkflow:
         assert result.success
 
         assert captured["to"] == "maria@test.com"
-        assert "sub-42" in captured["subject"]
+        assert "item-42" in captured["subject"]
         assert "Maria" in captured["body"]
         assert "★" in captured["body"]
-        assert "Buen desempeno" in captured["body"]
+        assert "Good job" in captured["body"]
 
     @pytest.mark.asyncio
     async def test_no_feedback(self, workflow, monkeypatch):
@@ -121,18 +119,18 @@ class TestNotificationWorkflow:
         async def fake_get_user(uid):
             return {"name": "Test", "email": "test@test.com"}
 
-        def fake_send_email(to, subject, body):
+        async def fake_send_email(self_email, to, subject, body):
             captured["body"] = body
+            return True
 
         monkeypatch.setattr("orchestration.workflows.notifications.get_user", fake_get_user)
-        monkeypatch.setattr("orchestration.workflows.notifications._send_email", fake_send_email)
-        monkeypatch.setattr("orchestration.workflows.notifications.SMTP_HOST", "")
+        monkeypatch.setattr("orchestration.utils.email_client.EmailClient.send_email", fake_send_email)
 
         event = Event(
-            type="review.completed",
+            type="item.reviewed",
             payload={
-                "submission_id": "sub-99",
-                "actor_id": "usr-001",
+                "item_id": "item-99",
+                "user_id": "usr-001",
                 "score": 3,
                 "feedback": "",
             },
@@ -140,4 +138,4 @@ class TestNotificationWorkflow:
 
         result = await workflow.execute(event)
         assert result.success
-        assert "Feedback del director" not in captured["body"]
+        assert "Feedback:" not in captured["body"]

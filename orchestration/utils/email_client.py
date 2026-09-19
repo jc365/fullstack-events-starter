@@ -29,8 +29,8 @@ class EmailClient:
 
     def __init__(self) -> None:
         self.provider = os.getenv("EMAIL_PROVIDER", "console")
-        self.email_from = os.getenv("EMAIL_FROM", "noreply@castant.local")
-        self.from_name = os.getenv("EMAIL_FROM_NAME", "Castant")
+        self.email_from = os.getenv("EMAIL_FROM", "noreply@events-starter.local")
+        self.from_name = os.getenv("EMAIL_FROM_NAME", "Events Starter")
 
         # Resend config
         self.api_key = os.getenv("RESEND_API_KEY", "")
@@ -63,25 +63,17 @@ class EmailClient:
 
     def _add_unsubscribe_footer(self, body: str) -> str:
         """Append standard unsubscribe footer to email body."""
-        # import textwrap
-        # footer = textwrap.dedent("""
-        # \n\n\n(*) 📧 Este es un mensaje automático de Castant.
-        
-        # Si no deseas recibir más comunicaciones, puedes darte de baja 
-        # respondiendo a este correo con el asunto "unsubscribe".
-        # """)
         footer = """
-\n\n\n(*) 📧 Este es un mensaje automático de Castant.
-Si no deseas recibir más comunicaciones, puedes darte de baja 
-respondiendo a este correo con el asunto "unsubscribe".
+\n\n\n(*) This is an automated message from Events Starter.
+To unsubscribe, reply to this email with subject "unsubscribe".
 """
-        return body + footer        
+        return body + footer
 
 
     async def _send_console(self, to: str, subject: str, body: str) -> bool:
         """Log email to console (development)."""
         logger.info(
-            "📧 [CONSOLE EMAIL]\n  To: %s\n  From: %s <%s>\n  Subject: %s\n  Body:\n%s",
+            "[CONSOLE EMAIL]\n  To: %s\n  From: %s <%s>\n  Subject: %s\n  Body:\n%s",
             to, self.from_name, self.email_from, subject, body,
         )
         return True
@@ -138,11 +130,9 @@ respondiendo a este correo con el asunto "unsubscribe".
         msg["From"] = f"{self.from_name} <{self.email_from}>"
         msg["To"] = to
 
-        # 🔥 Añadir headers de unsubscribe (One-click)
-        # El email de unsubscribe debe ser el mismo que el remitente
-        unsubscribe_email = self.email_from  # castant@juancarlos.dpdns.org
+        unsubscribe_email = self.email_from
         msg["List-Unsubscribe"] = f"<mailto:{unsubscribe_email}?subject=unsubscribe>"
-        msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"    
+        msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 
         try:
             loop = __import__("asyncio").get_running_loop()

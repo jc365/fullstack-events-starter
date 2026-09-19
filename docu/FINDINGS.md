@@ -99,3 +99,23 @@ Se resolverá en 3.3c si añadimos fileUrl al PATCH de items.
 - `adminMiddleware` hace un `findById` por cada request a `/admin/*`. Para alta frecuencia, considerar caché de roles.
 - `ConfigPage` no valida formato JSON en textarea — si el usuario ingresa JSON inválido, el backend rechaza silenciosamente.
 - No hay ruta `GET /bitacora` fuera del prefijo `/admin/` — la bitácora es exclusivamente admin.
+
+## Fase 4 — Orquestador Genérico
+
+### Cambios
+
+- `utils/backend_client.py`: renombrado `patch_submission_metadata` → `patch_item_metadata`, `get_submission` → `get_item`, eliminado `get_round` (no usado)
+- `workflows/video_processor.py` → `workflows/file_processor.py`: renombrado a `FileProcessorWorkflow`, event_type `item.created`, payload `item_id`/`file_url`/`mime_type`. Skip silencioso para archivos no-video.
+- `workflows/notifications.py`: event_type `item.reviewed`, payload `user_id`/`item_id` (era `actor_id`/`submission_id`). Email genérico sin Castant.
+- `utils/email_client.py`: defaults `noreply@events-starter.local`, footer genérico (era `castant.local` + Castant)
+- `webhooks/server.py`: título "Events Starter", WORKFLOWS registry actualizado
+- `workflows/r2_monitor.py`: alert email sin "Castant"
+- `config.py`: `UPLOADS_DIR` default `uploads/files` (era `uploads/videos`)
+- `backend/storageService.ts`: `LOCAL_UPLOADS_DIR` alineado a `uploads/files`
+- Tests: 30/30 passing (antes 27/30 con 3 fallos preexistentes)
+- `docu/ORCHESTRATION.md`: documentación completa del orquestador
+
+### Deuda conocida
+
+- `webhookClient.ts` en backend existe pero no se usa en ningún use-case. El orquestador recibe eventos que nadie emite todavía. Pendiente conectar en un use-case (ej: `CreateItemUseCase` → `dispatchEvent('item.created', ...)`).
+- `adminMiddleware` hace un `findById` por cada request a `/admin/*`. Para alta frecuencia, considerar caché de roles.
