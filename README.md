@@ -24,20 +24,20 @@ Reusable fullstack starter kit with Node/Express backend, React frontend, and Py
 
 ```bash
 # 1. Clone and rename
-git clone https://github.com/tu-usuario/fullstack-events-starter.git my-project
+git clone https://github.com/jc365/fullstack-events-starter.git my-project
 cd my-project
 ./setup.sh my-project
 
-# 2. Edit credentials
-#    - backend/.env (DATABASE_URL, JWT_SECRET)
-#    - frontend/.env (VITE_API_URL)
-
-# 3. Install deps, start PostgreSQL, seed
+# 2. Install deps, start PostgreSQL, seed
 ./postsetup.sh
 
-# 4. Start all services
+# 3. Start all services
 npm run dev:all
 ```
+
+> **Nota:** Si has hecho fork del starter, sustituye `jc365` por tu usuario de GitHub.
+
+> Los `.env` se crean automáticamente con valores placeholder funcionales para desarrollo local. Antes de desplegar a producción, edítalos (especialmente `JWT_SECRET`).
 
 > Uses `prisma db push` (no migration files). See [docu/MIGRATIONS.md](docu/MIGRATIONS.md) for versioned migrations.
 
