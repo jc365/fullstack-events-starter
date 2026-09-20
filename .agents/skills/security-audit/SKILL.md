@@ -19,9 +19,9 @@ Realizar auditorías de seguridad exhaustivas en aplicaciones web.
 
 ### 2. Autorización
 - [ ] ¿Un usuario puede acceder a datos de otro usuario?
-- [ ] ¿Un actor puede acceder a funciones de director?
-- [ ] ¿Un director solo ve sus castings?
-- [ ] ¿Un actor solo ve sus rondas?
+- [ ] ¿Un user puede acceder a funciones de admin?
+- [ ] ¿Un user solo ve sus propios items?
+- [ ] ¿Un admin puede ver todo lo que debe?
 
 ### 3. Validación de entrada
 - [ ] ¿Todos los inputs están sanitizados?
@@ -34,7 +34,7 @@ Realizar auditorías de seguridad exhaustivas en aplicaciones web.
 - [ ] ¿Se valida el tamaño máximo?
 - [ ] ¿Los archivos se almacenan con nombres seguros? (UUID, no nombres originales)
 - [ ] ¿Los archivos se sirven desde una ruta protegida?
-- [ ] ¿Los archivos se eliminan cuando la submission se elimina?
+- [ ] ¿Los archivos se eliminan cuando el item se elimina?
 - [ ] ¿Hay limpieza automática de archivos antiguos? (cron job)
 
 ### 5. Variables de entorno
@@ -106,7 +106,7 @@ Realizar auditorías de seguridad exhaustivas en aplicaciones web.
 ## Output
 
 El informe de auditoría debe guardarse en:
-`.opencode/skills/security-audit/reports/<YYYYMMDD_HHMMSS>.md`
+`.agents/reports/audit-<YYYYMMDD_HHMMSS>.md`
 
 El archivo debe incluir:
 - Resumen ejecutivo

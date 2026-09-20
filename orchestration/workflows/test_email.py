@@ -27,12 +27,12 @@ class TestEmailWorkflow(BaseWorkflow):
 
         sent = await email_client.send_email(
             to=target,
-            subject="Castant — Test Email",
+            subject="Events Starter — Test Email",
             body=(
-                "This is a test email from Castant Orchestrator.\n\n"
+                "This is a test email from Events Starter Orchestrator.\n\n"
                 f"Provider: {email_client.provider}\n"
                 f"From: {email_client.from_name} <{email_client.email_from}>\n\n"
-                "— Castant Orchestrator"
+                "— Events Starter Orchestrator"
             ),
         )
 

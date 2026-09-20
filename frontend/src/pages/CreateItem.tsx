@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
 
-export default function CreateCasting() {
+export default function CreateItem() {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -15,10 +15,10 @@ export default function CreateCasting() {
     setLoading(true);
 
     try {
-      await client.post('/castings', { title, description });
-      navigate('/castings');
+      await client.post('/items', { title, description });
+      navigate('/items');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear casting');
+      setError(err instanceof Error ? err.message : 'Error creating item');
     } finally {
       setLoading(false);
     }
@@ -27,7 +27,7 @@ export default function CreateCasting() {
   return (
     <div className="max-w-lg">
       <h1 className="font-display-lg-mobile text-display-lg-mobile text-on-background mb-6">
-        Create Casting
+        Create Item
       </h1>
       {error && (
         <div className="bg-error-container text-on-error-container p-3 rounded mb-4 text-sm">
@@ -40,7 +40,7 @@ export default function CreateCasting() {
       >
         <div>
           <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-2">
-            Título
+            Title
           </label>
           <input
             type="text"
@@ -52,7 +52,7 @@ export default function CreateCasting() {
         </div>
         <div>
           <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-2">
-            Descripción
+            Description
           </label>
           <textarea
             value={description}
@@ -67,7 +67,7 @@ export default function CreateCasting() {
           disabled={loading}
           className="w-full bg-primary-container text-on-primary-container font-title-sm text-title-sm py-3 px-4 rounded hover:bg-primary transition-colors disabled:opacity-50"
         >
-          {loading ? 'Creando...' : 'Crear Casting'}
+          {loading ? 'Creating...' : 'Create Item'}
         </button>
       </form>
     </div>

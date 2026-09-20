@@ -11,15 +11,16 @@ Este documento registra hallazgos conocidos, decisiones y deuda técnica aceptad
 **Decisión:** no arreglar masivamente. Reducir progresivamente en cada iteración.
 
 **Detalle:**
-- TS2835 (~110 errores): falta extensiones `.js` en imports (esperado con `node16` + `tsx`)
+- TS2835 (~128 errores): falta extensiones `.js` en imports (esperado con `node16` + `tsx`)
 - TS7006 (~15 errores): callbacks sin tipado explícito (fácil de arreglar)
 - TS2349 (1 error): `pino-http` sin call signature
+- Total: ~146 errores (subió de ~128 por archivos nuevos de Fases 3.5 y 5.4; no hay errores nuevos de otros tipos)
 
 **Cómo verificar que no introduces errores nuevos:**
 ```bash
 cd backend
 npx tsc --noEmit 2>&1 | wc -l
-# Base actual: ~127 errores
+# Base actual: ~146 errores
 ```
 
 **Plan de reducción (a futuro):**
@@ -100,22 +101,25 @@ Se resolverá en 3.3c si añadimos fileUrl al PATCH de items.
 - `ConfigPage` no valida formato JSON en textarea — si el usuario ingresa JSON inválido, el backend rechaza silenciosamente.
 - No hay ruta `GET /bitacora` fuera del prefijo `/admin/` — la bitácora es exclusivamente admin.
 
-## Fase 4 — Orquestador Genérico
+## Fase 5 — Limpieza y Pulido
 
 ### Cambios
-
-- `utils/backend_client.py`: renombrado `patch_submission_metadata` → `patch_item_metadata`, `get_submission` → `get_item`, eliminado `get_round` (no usado)
-- `workflows/video_processor.py` → `workflows/file_processor.py`: renombrado a `FileProcessorWorkflow`, event_type `item.created`, payload `item_id`/`file_url`/`mime_type`. Skip silencioso para archivos no-video.
-- `workflows/notifications.py`: event_type `item.reviewed`, payload `user_id`/`item_id` (era `actor_id`/`submission_id`). Email genérico sin Castant.
-- `utils/email_client.py`: defaults `noreply@events-starter.local`, footer genérico (era `castant.local` + Castant)
-- `webhooks/server.py`: título "Events Starter", WORKFLOWS registry actualizado
-- `workflows/r2_monitor.py`: alert email sin "Castant"
-- `config.py`: `UPLOADS_DIR` default `uploads/files` (era `uploads/videos`)
-- `backend/storageService.ts`: `LOCAL_UPLOADS_DIR` alineado a `uploads/files`
-- Tests: 30/30 passing (antes 27/30 con 3 fallos preexistentes)
-- `docu/ORCHESTRATION.md`: documentación completa del orquestador
+- **5.1:** Frontend 100% libre de Castant — Items.tsx, CreateItem.tsx reescritos con endpoints /items, LoginForm.tsx con branding "Events Starter"
+- **5.2:** Orquestador 100% libre de Castant — main.py y test_email.py actualizados
+- **5.3:** Scripts y dependencias limpiados — SQLite legacy eliminado, venv Python en postsetup.sh, requirements split
+- **5.4:** Backend libre de SQLite — prismaClient.ts y seed.ts PostgreSQL-only, `@libsql/client` y `@prisma/adapter-libsql` eliminados, dead code (console.logs, DEMO_MODE guard) limpiado
+- **5.5a:** .gitignore y SKILL.md verificados — sin cambios necesarios
+- **5.5b:** AGENTS.md y README.md reescritos — documentación completa del starter
+- **5.6:** Verificación end-to-end — starter funciona desde cero (setup, postsetup, API). Bug encontrado: `uploadFile()` no creaba subdirectorios — corregido
 
 ### Deuda conocida
 
 - `webhookClient.ts` en backend existe pero no se usa en ningún use-case. El orquestador recibe eventos que nadie emite todavía. Pendiente conectar en un use-case (ej: `CreateItemUseCase` → `dispatchEvent('item.created', ...)`).
 - `adminMiddleware` hace un `findById` por cada request a `/admin/*`. Para alta frecuencia, considerar caché de roles.
+
+### Hallazgos 5.6
+
+- **Static:** frontend tsc 0 errores, vitest 17/17, playwright 8 tests listados, backend tsc ~146 (baseline), pytest 30/30
+- **E2E:** setup.sh + postsetup.sh funcionan desde cero. API completa verificada: login, create item, list items, bitacora, config, PATCH config, file upload
+- **Bug corregido:** `storageService.ts:uploadFile()` solo creaba `uploads/files/` pero no subdirectorios anidados (`items/{id}/`). Corregido con `fs.mkdirSync(fileDir, { recursive: true })`
+- **Orquestador:** no verificado en E2E (requiere inicio separado)

@@ -48,10 +48,11 @@ export async function uploadFile(key: string, buffer: Buffer, contentType: strin
   }
 
   // Fallback: local storage
-  if (!fs.existsSync(LOCAL_UPLOADS_DIR)) {
-    fs.mkdirSync(LOCAL_UPLOADS_DIR, { recursive: true });
-  }
   const filePath = path.join(LOCAL_UPLOADS_DIR, key);
+  const fileDir = path.dirname(filePath);
+  if (!fs.existsSync(fileDir)) {
+    fs.mkdirSync(fileDir, { recursive: true });
+  }
   fs.writeFileSync(filePath, buffer);
   return key;
 }

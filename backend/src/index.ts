@@ -19,11 +19,6 @@ import { startAutoReload } from './infrastructure/config/config';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// M2: Production DEMO_MODE guard - Currently it is necesary the demo_mode
-// if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE === 'true') {
-//   throw new Error('DEMO_MODE cannot be enabled in production');
-// }
-
 const app = express();
 // 📌 Habilita trust proxy para que req.ip sea la IP real del cliente
 // "1" significa que confía en el primer proxy que está delante de la aplicación
@@ -42,22 +37,15 @@ app.use(cors({
   credentials: true,
 }));
 
-// --- Estado de var de ENV
-// console.log('🔍 CORS_ORIGIN:', process.env.CORS_ORIGIN);
-// console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
-// console.log('🔍 DEMO_MODE:', process.env.DEMO_MODE);
-
-// Helmet (HSTS desactivado en desarrollo)
+app.use(express.json());
 app.use(helmet({
   hsts: process.env.NODE_ENV === 'production'
     ? { maxAge: 31536000, includeSubDomains: true, preload: true }
     : false,
 }));
 
-app.use(express.json());
 app.use(requestContextMiddleware);
 
-// Serve uploaded videos
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 const httpLogger = pinoHttp({

@@ -35,7 +35,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
             <span className="material-symbols-outlined text-primary">movie</span>
           </div>
           <h1 className="font-headline-md text-headline-md text-primary font-bold tracking-tight">
-            Slate Casting
+            Events Starter
           </h1>
         </div>
 

@@ -1,7 +1,7 @@
 """
 @file main.py
 @module orchestration
-Entry point for the Castant orchestration server.
+Entry point for the Events Starter orchestration server.
 
 Usage:
     python -m orchestration.main

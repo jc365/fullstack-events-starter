@@ -5,62 +5,63 @@
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev/)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg)](https://www.python.org/)
 
-Monorepo starter kit with Node/Express backend, React frontend, and Python orchestrator for event-driven workflows.
+Reusable fullstack starter kit with Node/Express backend, React frontend, and Python orchestrator for event-driven workflows.
 
-## Features
+## Stack
 
-- **Backend:** Express 5 + Prisma + PostgreSQL + JWT auth + dynamic config + audit log
-- **Frontend:** React + Vite + Tailwind + 6 themes + context-based state
-- **Orchestrator:** FastAPI + event-driven workflows + webhooks + cron integration
-- **Storage:** Cloudflare R2 with local fallback
-- **Email:** Multiple providers (console, SMTP, Resend)
-- **Testing:** Vitest + Playwright + pytest
-- **Deployment:** Render (backend + orchestrator) + Vercel (frontend) + Neon (PostgreSQL)
+| Layer | Tech |
+|-------|------|
+| Backend | Express 5 + TypeScript 6.0 + Prisma 7 + PostgreSQL |
+| Frontend | React 18 + Vite + Tailwind CSS + 6 themes |
+| Orchestrator | Python/FastAPI + uvicorn + httpx |
+| Auth | JWT (jsonwebtoken) + bcrypt |
+| Database | PostgreSQL 15+ (Docker for dev, Neon for prod) |
+| Storage | Cloudflare R2 (S3-compatible) with local fallback |
+| Email | Multi-provider (console, SMTP, Resend) |
+| Testing | Vitest 4 (backend/frontend) + Playwright (E2E) + pytest (orchestrator) |
 
 ## Quick Start
 
 ```bash
-# 1. Clonar y personalizar
-git clone https://github.com/tu-usuario/fullstack-events-starter.git mi-proyecto
-cd mi-proyecto
-./setup.sh mi-proyecto
+# 1. Clone and rename
+git clone https://github.com/tu-usuario/fullstack-events-starter.git my-project
+cd my-project
+./setup.sh my-project
 
-# 2. Editar credenciales en .env
+# 2. Edit credentials
 #    - backend/.env (DATABASE_URL, JWT_SECRET)
 #    - frontend/.env (VITE_API_URL)
-#    - orchestration/.env (si aplica)
-#    - tests/REST Client/.env (URLs para pruebas manuales)
 
-# 3. Instalar dependencias, levantar PostgreSQL y sembrar
+# 3. Install deps, start PostgreSQL, seed
 ./postsetup.sh
 
-# 4. Arrancar backend y frontend
+# 4. Start all services
 npm run dev:all
 ```
 
-> **Nota:** El starter usa `prisma db push` (sin migraciones versionadas). Si necesitas migraciones versionadas, consulta [docu/MIGRATIONS.md](docu/MIGRATIONS.md).
+> Uses `prisma db push` (no migration files). See [docu/MIGRATIONS.md](docu/MIGRATIONS.md) for versioned migrations.
 
-Comandos útiles (desde la raíz):
+### Useful Commands
 
-| Comando | Descripción |
+| Command | Description |
 |---------|-------------|
-| `./postsetup.sh` | Instalar deps, arrancar PostgreSQL y sembrar |
-| `npm run db:up` | Levantar PostgreSQL (Docker) |
-| `npm run db:down` | Detener PostgreSQL |
-| `npm run db:push` | Sincronizar schema contra la BD |
-| `npm run db:seed` | Insertar datos demo |
-| `npm run db:studio` | Abrir Prisma Studio |
-| `npm run db:backup` | Backup de PostgreSQL |
-| `npm run db:restore` | Restaurar backup |
+| `./postsetup.sh` | Install deps, start PostgreSQL, seed |
+| `npm run dev:all` | Start DB + Backend + Frontend + Orchestrator |
+| `npm run db:up` | Start PostgreSQL (Docker) |
+| `npm run db:push` | Sync schema |
+| `npm run db:seed` | Insert demo data |
+| `npm run db:backup` | Backup PostgreSQL |
+| `npm run db:restore` | Restore backup |
+| `npm run db:studio` | Open Prisma Studio |
 
-> **Note on PostgreSQL port:** This starter uses port `5433` by default to avoid conflicts with other PostgreSQL instances (which commonly use `5432`). If you prefer `5432`, edit `docker-compose.yml` and `backend/.env`.
+> PostgreSQL runs on port `5433` (host) / `5432` (container) to avoid conflicts.
 
 ## Project Structure
 
 ```
 fullstack-events-starter/
 ├── backend/                  # Express 5 + Prisma + TypeScript
-│   ├── prisma/               # Schema, migrations, seed
+│   ├── prisma/               # Schema, seed, backups
 │   ├── src/
 │   │   ├── domain/           # Entities, value objects, interfaces
 │   │   ├── application/      # Use cases (commands, queries)
@@ -68,75 +69,86 @@ fullstack-events-starter/
 │   └── tests/                # Unit + integration tests
 ├── frontend/                 # React + Vite + Tailwind
 │   ├── src/
-│   │   ├── components/       # UI components
-│   │   ├── context/          # React context providers
-│   │   ├── pages/            # Route pages
-│   │   └── utils/            # Helpers
+│   │   ├── components/       # UI components (Layout, Modals, etc.)
+│   │   ├── context/          # UserContext, ThemeContext, ToastContext
+│   │   ├── pages/            # Dashboard, Items, ItemDetail, admin/
+│   │   └── utils/            # scoring.ts, status.ts
 │   └── tests/e2e/            # Playwright E2E tests
 ├── orchestration/            # Python + FastAPI
-│   ├── webhooks/             # FastAPI server
+│   ├── webhooks/             # FastAPI server (port 8080)
 │   ├── workflows/            # Event-driven workflows
-│   └── utils/                # Email, backend client
-├── docs/                     # Architecture docs, diagrams
-└── docu/                     # Clean Architecture guide
+│   ├── utils/                # Email client, backend client
+│   └── tests/                # pytest tests
+├── .agents/skills/           # AI agent skills (versioned)
+├── docu/                     # Architecture docs, findings, migrations
+└── docs/                     # Diagrams, Cloudflare worker
 ```
-
-## Requirements
-
-- **Node.js** 20+
-- **Python** 3.10+
-- **PostgreSQL** 15+ (or Docker)
-- **Docker** (optional, for local DB)
-- **ffmpeg** (optional, for video processing workflows)
 
 ## What's Included
 
-| Feature | Stack | Description |
-|---------|-------|-------------|
-| REST API | Express 5 + TypeScript | Full CRUD with validation, auth, rate limiting |
-| Database | Prisma + PostgreSQL | Schema-first ORM with db push (migrations optional) |
-| Auth | JWT | Token-based auth with role-based access |
-| Config | Dynamic config table | Runtime config via API, no restart needed |
-| Audit | BitacoraService | Non-blocking audit log for all mutations |
-| Admin Panel | React | Bitacora viewer + config editor (admin role only) |
-| Frontend | React + Vite | SPA with routing, context state, themes |
-| Themes | Tailwind + CSS vars | 6 built-in themes (light, dark, ocean, forest, sunset, night) |
-| Workflows | FastAPI | Event-driven with webhook triggers |
-| Storage | Cloudflare R2 | S3-compatible with local fallback |
-| Email | Multi-provider | Console (dev), SMTP, Resend |
-| Testing | Vitest + Playwright | Unit, integration, and E2E tests |
+| Feature | Description |
+|---------|-------------|
+| REST API | Express 5 with full CRUD, validation, auth, rate limiting |
+| Database | Prisma 7 + PostgreSQL, schema-first with `db push` |
+| Auth | JWT tokens with role-based access (admin, user, guest) |
+| Dynamic Config | Runtime config via API, no restart needed |
+| Audit Log | Non-blocking bitácora for all mutations |
+| Admin Panel | Bitácora viewer + config editor (admin role only) |
+| Themes | 6 built-in themes via Tailwind CSS custom properties |
+| Workflows | FastAPI event-driven with webhook triggers |
+| Storage | Cloudflare R2 with local fallback |
+| Email | Console (dev), SMTP, Resend providers |
+| AI Skills | Reusable `.agents/skills/` for common tasks |
+
+## Admin Panel
+
+The admin panel (admin role only) includes:
+
+- **Bitácora** — Paginated audit log with filters (action, entity type, dates, user)
+- **Config** — Runtime configuration editor organized by category
+
+Access via sidebar when logged in as admin.
 
 ## What to Customize
 
-This starter uses a generic **Item** model as the domain example. To adapt to your domain:
+The starter uses a generic **Item** model as the example domain. To adapt:
 
-1. **Define your entities** in `backend/src/domain/entities/`
-2. **Create value objects** in `backend/src/domain/value-objects/`
-3. **Update the Prisma schema** in `backend/prisma/schema.prisma`
-4. **Implement use cases** in `backend/src/application/use-cases/`
-5. **Add API routes** in `backend/src/infrastructure/api/v1/routes.ts`
-6. **Build frontend pages** in `frontend/src/pages/`
+1. Define entities in `backend/src/domain/entities/`
+2. Create value objects in `backend/src/domain/value-objects/`
+3. Update the Prisma schema in `backend/prisma/schema.prisma`
+4. Implement use cases in `backend/src/application/use-cases/`
+5. Add API routes in `backend/src/infrastructure/api/v1/routes.ts`
+6. Build frontend pages in `frontend/src/pages/`
 
-See the [Customization Guide](AGENTS.md#customization-guide) in AGENTS.md for detailed instructions.
+## AI Agent Skills
 
-## Optional Extensions
+Skills in `.agents/skills/` provide specialized instructions for common tasks:
 
-- **Cloudflare Worker:** Cron-based health ping to keep services alive. See `docs/cloudflare-worker.js`.
+| Skill | Purpose |
+|-------|---------|
+| `flow-diagram` | Generate Mermaid diagrams from process descriptions |
+| `frontend-design` | Design system and HTML mockups |
+| `security-audit` | Comprehensive security audit checklist |
+| `testing-pattern` | Pattern for writing unit tests (VO + Use Cases) |
+
+If using OpenCode, skills are automatically available via the `skill` tool.
+
+## Requirements
+
+- Node.js 20+
+- Python 3.10+
+- PostgreSQL 15+ (or Docker)
+- Docker (optional, for local DB)
 
 ## Documentation
 
 - [AGENTS.md](AGENTS.md) — Full project conventions, patterns, and commands
 - [docu/GUIDE.md](docu/GUIDE.md) — Clean Architecture reference
+- [docu/ORCHESTRATION.md](docu/ORCHESTRATION.md) — Orchestrator event types, payloads, workflows
+- [docu/FINDINGS.md](docu/FINDINGS.md) — Known debt and decisions
+- [docu/MIGRATIONS.md](docu/MIGRATIONS.md) — Prisma migration strategy
 - [docs/diagrams/](docs/diagrams/) — Flow diagrams
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).

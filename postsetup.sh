@@ -113,7 +113,21 @@ else
   info "Skipping seed"
 fi
 
-# ── 5. Summary ────────────────────────────────────────────────────────────────
+# ── 5. Install orchestrator venv ────────────────────────────────────────────────
+if [[ -d orchestration ]] && [[ -f orchestration/requirements.txt ]]; then
+  info "Setting up orchestrator Python venv..."
+  if ! command -v python3 >/dev/null 2>&1; then
+    warn "python3 not found. Skipping orchestrator venv."
+  else
+    if [[ ! -d orchestration/venv ]]; then
+      run python3 -m venv orchestration/venv
+    fi
+    run orchestration/venv/bin/pip install -q -r orchestration/requirements.txt
+    ok "Orchestrator venv ready"
+  fi
+fi
+
+# ── 6. Summary ────────────────────────────────────────────────────────────────
 echo ""
 echo "════════════════════════════════════════"
 if $DRY_RUN; then

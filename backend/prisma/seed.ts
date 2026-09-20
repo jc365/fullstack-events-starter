@@ -8,21 +8,22 @@
 
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 
-const url = process.env.DATABASE_URL || 'file:./dev.db';
-const isPostgres = url.startsWith('postgresql://');
-const adapter = isPostgres
-  ? new PrismaPg(new Pool({ connectionString: url }))
-  : new PrismaLibSql({ url });
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString || !connectionString.startsWith('postgresql://')) {
+  throw new Error('DATABASE_URL must be set to a PostgreSQL connection string');
+}
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const DEMO_PASSWORD_HASH = bcrypt.hashSync('changeme', 10);
 
 async function main() {
-  console.log(`🌱 Ejecutando seed... con URL: ${url}`);
+  console.log(`🌱 Ejecutando seed... con URL: ${connectionString}`);
 
   // --- Users ---
   const admin = await prisma.user.upsert({

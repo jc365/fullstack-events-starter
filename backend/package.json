@@ -2,14 +2,9 @@
   "name": "backend",
   "type": "module",
   "version": "1.0.0",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
   "scripts": {
     "dev": "tsx src/index.ts",
     "start": "tsx src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
 
     "postinstall": "prisma generate",
 
@@ -19,10 +14,7 @@
     "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",
 
     "db:backup": "npx tsx scripts/backup-pg.ts",
-    "db:restore": "npx tsx scripts/restore-pg.ts",
-
-    "db:backup:sqlite": "npx tsx scripts/backup-db.ts",
-    "db:restore:sqlite": "npx tsx scripts/restore-db.ts"
+    "db:restore": "npx tsx scripts/restore-pg.ts"
   },
   "keywords": [],
   "author": "",
@@ -48,8 +40,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1112.0",
     "@aws-sdk/s3-request-presigner": "^3.1112.0",
-    "@libsql/client": "^0.17.4",
-    "@prisma/adapter-libsql": "^7.8.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.8.0",
     "bcrypt": "^6.0.0",
