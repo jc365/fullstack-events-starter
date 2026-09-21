@@ -3,6 +3,7 @@
 @module orchestration/webhooks/server
 """
 
+import asyncio
 import logging
 import os
 import uuid
@@ -36,6 +37,10 @@ from orchestration.event_poller import EventPoller
 
 logger = logging.getLogger(__name__)
 
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3000")
+BACKEND_WAIT_MAX_ATTEMPTS = 30
+BACKEND_WAIT_INTERVAL = 1  # seconds
+
 WORKFLOWS = {
     "item.created": FileProcessorWorkflow(),
     "cleanup.daily": CleanupWorkflow(),
@@ -51,9 +56,29 @@ async def _run_workflow(workflow, event: Event) -> WorkflowResult:
     return await workflow.safe_execute(event)
 
 
+async def wait_for_backend() -> None:
+    """Wait for the backend to be reachable. Warns on each retry, does not block forever."""
+    import httpx
+    for attempt in range(1, BACKEND_WAIT_MAX_ATTEMPTS + 1):
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"{BACKEND_URL}/health", timeout=5.0)
+                if resp.status_code == 200:
+                    logger.info("Backend is ready")
+                    return
+        except Exception:
+            pass
+        if attempt < BACKEND_WAIT_MAX_ATTEMPTS:
+            logger.warning("Backend not ready (attempt %d/%d), retrying in %ds...",
+                           attempt, BACKEND_WAIT_MAX_ATTEMPTS, BACKEND_WAIT_INTERVAL)
+            await asyncio.sleep(BACKEND_WAIT_INTERVAL)
+    logger.warning("Backend not ready after %d attempts — continuing anyway", BACKEND_WAIT_MAX_ATTEMPTS)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Orchestration server starting — %d workflows registered", len(WORKFLOWS))
+    await wait_for_backend()
     start_auto_reload()
     await poller.start()
     yield

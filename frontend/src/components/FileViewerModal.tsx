@@ -5,7 +5,7 @@
  * Modal genérico para previsualizar ficheros (imagen, video, audio, pdf, texto, json).
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFileUrls } from '../hooks/useFileUrls';
 
 interface FileViewerModalProps {
@@ -82,9 +82,11 @@ function TextPreview({ url }: { url: string }) {
 }
 
 export default function FileViewerModal({ isOpen, file, onClose }: FileViewerModalProps) {
-  const { fileUrls, loading: urlLoading } = useFileUrls(
-    file ? [{ id: 'current', fileKey: file.key }] : []
+  const fileRefs = useMemo(
+    () => file ? [{ id: 'current', fileKey: file.key }] : [],
+    [file?.key],
   );
+  const { fileUrls, loading: urlLoading } = useFileUrls(fileRefs);
   const resolvedUrl = file?.url ?? fileUrls['current'] ?? null;
 
   useEffect(() => {

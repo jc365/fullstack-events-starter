@@ -55,8 +55,8 @@ class EventPoller:
                 self._backoff = POLL_INTERVAL
             except asyncio.CancelledError:
                 break
-            except Exception:
-                logger.exception("Poll cycle failed")
+            except Exception as e:
+                logger.warning("Poll cycle failed: %s", e)
                 self._backoff = min(self._backoff * 2, MAX_BACKOFF)
                 logger.debug("Backoff increased to %ds", self._backoff)
             await asyncio.sleep(self._backoff)

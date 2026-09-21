@@ -88,9 +88,10 @@ export default app;
 
 // Solo inicia el servidor si se ejecuta directamente (no en tests)
 if (import.meta.url === `file://${process.argv[1]}`) {
-  startAutoReload();
-  startLogLevelSync();
-  app.listen(port, () => {
-    logger.info({ port }, 'Server started');
+  startAutoReload().then(() => {
+    startLogLevelSync();
+    app.listen(port, () => {
+      logger.info({ port }, 'Server started');
+    });
   });
 }

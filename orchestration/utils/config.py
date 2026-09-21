@@ -32,8 +32,11 @@ async def load_config() -> None:
         _cache = {row["key"]: row["value"] for row in rows}
         _loaded = True
         logger.debug("Config reloaded from backend: %d entries", len(_cache))
-    except Exception:
-        logger.exception("Failed to reload config from backend")
+    except Exception as e:
+        if _loaded:
+            logger.warning("Failed to reload config from backend: %s", e)
+        else:
+            logger.warning("Config not loaded yet (backend may be starting): %s", e)
 
 
 def get_config(key: str, default: Any = None) -> Any:

@@ -62,8 +62,11 @@ CONTAINER_NAME="${PROJECT_NAME}-db"
 # ── 1. Install dependencies ───────────────────────────────────────────────────
 if ! $SKIP_INSTALL; then
   info "Installing dependencies (root, backend, frontend)..."
+  info "Dependencies of root..."
   run npm install
+  info "Dependencies of backend..."
   run npm --prefix backend install
+  info "Dependencies of frontend..."
   run npm --prefix frontend install
   ok "Dependencies installed (Prisma generated via postinstall)"
 else

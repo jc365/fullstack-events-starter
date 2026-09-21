@@ -26,6 +26,7 @@ export function useFileUrls(files: FileRef[]): {
   const [fileUrls, setFileUrls] = useState<FileUrlMap>({});
   const [loading, setLoading] = useState(false);
   const mountedRef = useRef(true);
+  const lastKeysRef = useRef<string>('');
 
   const fetchUrls = useCallback(async (refs: Array<{ id: string; key: string }>) => {
     if (refs.length === 0) return;
@@ -51,6 +52,14 @@ export function useFileUrls(files: FileRef[]): {
   }, []);
 
   const refreshAll = useCallback(() => {
+    const keys = files
+      .filter((f) => f.fileKey)
+      .map((f) => f.fileKey as string)
+      .sort()
+      .join(',');
+    if (keys === lastKeysRef.current) return;
+    lastKeysRef.current = keys;
+
     const refs = files
       .filter((f) => f.fileKey)
       .map((f) => ({ id: f.id, key: f.fileKey as string }));

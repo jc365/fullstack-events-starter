@@ -111,6 +111,7 @@ Se resolverá en 3.3c si añadimos fileUrl al PATCH de items.
 - **5.5a:** .gitignore y SKILL.md verificados — sin cambios necesarios
 - **5.5b:** AGENTS.md y README.md reescritos — documentación completa del starter
 - **5.6:** Verificación end-to-end — starter funciona desde cero (setup, postsetup, API). Bug encontrado: `uploadFile()` no creaba subdirectorios — corregido
+- **5.7:** Arranque coordinado — backend espera a DB (30s, retry con WARN), orquestador espera a backend (30s, WARN sin bloquear), tokens de servicio con placeholder funcional en .env.example
 
 ### Deuda conocida
 
@@ -123,3 +124,35 @@ Se resolverá en 3.3c si añadimos fileUrl al PATCH de items.
 - **E2E:** setup.sh + postsetup.sh funcionan desde cero. API completa verificada: login, create item, list items, bitacora, config, PATCH config, file upload
 - **Bug corregido:** `storageService.ts:uploadFile()` solo creaba `uploads/files/` pero no subdirectorios anidados (`items/{id}/`). Corregido con `fs.mkdirSync(fileDir, { recursive: true })`
 - **Orquestador:** no verificado en E2E (requiere inicio separado)
+
+## Fase 5.8 — Fix: Bucle infinito GET /files/:key/url → 429
+
+### Problema
+
+Al abrir el detalle de un item con fichero asociado (ej: `item-demo-3`), la UI mostraba "network error" y el navegador entraba en bucle invocando `GET /api/v1/files/{key}/url`. El backend respondía 429 (Too Many Requests) repetidamente.
+
+### Causa raíz
+
+Bucle infinito de re-render en `FileViewerModal` → `useFileUrls`:
+
+1. `FileViewerModal.tsx:85-86` creaba un array inline `file ? [{ id: 'current', fileKey: file.key }] : []` como argumento a `useFileUrls`.
+2. Cada render creaba una **nueva referencia** de array, aunque los valores fueran idénticos.
+3. `useFileUrls` dependía de `files` en `useCallback` para `refreshAll`, que a su vez alimentaba un `useEffect`.
+4. El `useEffect` re-ejecutaba `fetchUrls` → petición HTTP → `setFileUrls`/`setLoading` → re-render → nuevo array → ciclo infinito.
+5. `apiLimiter` (100 req/15min en prod) se agotaba en segundos → 429.
+
+### Fix aplicado
+
+| Archivo | Cambio |
+|---------|--------|
+| `frontend/src/components/FileViewerModal.tsx:8` | Import `useMemo` añadido |
+| `frontend/src/components/FileViewerModal.tsx:84-91` | Array memoizado con `useMemo(() => ..., [file?.key])` — rompe la cadena de re-render |
+| `frontend/src/hooks/useFileUrls.ts:28` | `lastKeysRef` añadido para recordar el último set de keys fetcheadas |
+| `frontend/src/hooks/useFileUrls.ts:53-65` | Guard en `refreshAll`: compara keys sort+join, salta si idénticas |
+| `backend/src/infrastructure/api/v1/routes.ts:94` | `apiLimiter` subido de 100/500 a 1000/15min (defensa adicional) |
+
+### Verificación
+
+- Frontend tsc: 0 errores
+- Frontend vitest: 17/17
+- Branch: `feature/5.8` (sin merge a main)
