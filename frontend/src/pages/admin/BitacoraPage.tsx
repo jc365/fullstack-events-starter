@@ -20,8 +20,14 @@ interface BitacoraResponse {
 }
 
 const ACTION_OPTIONS = [
-  'user.created', 'item.created', 'item.updated', 'item.deleted',
-  'item.file_uploaded', 'config.updated', 'config.deleted',
+  { value: 'create_user',   label: 'User — Create' },
+  { value: 'create_item',   label: 'Item — Create' },
+  { value: 'update_item',   label: 'Item — Update' },
+  { value: 'delete_item',   label: 'Item — Delete' },
+  { value: 'file_uploaded', label: 'Item — File uploaded' },
+  { value: 'create_config', label: 'Config — Create' },
+  { value: 'update_config', label: 'Config — Update' },
+  { value: 'delete_config', label: 'Config — Delete' },
 ];
 
 export default function BitacoraPage() {
@@ -33,17 +39,24 @@ export default function BitacoraPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [filterAction, setFilterAction] = useState('');
+  const [filterActions, setFilterActions] = useState<string[]>([]);
   const [filterEntityType, setFilterEntityType] = useState('');
   const [filterSince, setFilterSince] = useState('');
   const [filterUntil, setFilterUntil] = useState('');
+
+  const toggleAction = (value: string) => {
+    setFilterActions((prev) =>
+      prev.includes(value) ? prev.filter((a) => a !== value) : [...prev, value]
+    );
+    setPage(1);
+  };
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const params: Record<string, string | number> = { page, limit };
-      if (filterAction) params.action = filterAction;
+      if (filterActions.length > 0) params.action = filterActions.join(',');
       if (filterEntityType) params.entityType = filterEntityType;
       if (filterSince) params.since = filterSince;
       if (filterUntil) params.until = filterUntil;
@@ -60,7 +73,7 @@ export default function BitacoraPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, filterAction, filterEntityType, filterSince, filterUntil, ensureUser]);
+  }, [page, limit, filterActions, filterEntityType, filterSince, filterUntil, ensureUser]);
 
   useEffect(() => {
     fetchEntries();
@@ -86,20 +99,38 @@ export default function BitacoraPage() {
       {/* Filters */}
       <div className="bg-surface border border-outline-variant/30 rounded-xl p-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
+          <div className="sm:col-span-2 lg:col-span-4">
             <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">
-              Action
+              Actions
             </label>
-            <select
-              value={filterAction}
-              onChange={(e) => { setFilterAction(e.target.value); setPage(1); }}
-              className="w-full bg-surface-container-high text-on-surface border border-outline-variant/30 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary"
-            >
-              <option value="">All actions</option>
-              {ACTION_OPTIONS.map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
+            <div className="flex flex-wrap gap-2">
+              {ACTION_OPTIONS.map((opt) => {
+                const active = filterActions.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => toggleAction(opt.value)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                      active
+                        ? 'bg-primary text-on-primary border-primary'
+                        : 'bg-surface-container-high text-on-surface-variant border-outline-variant/30 hover:border-primary/50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+              {filterActions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setFilterActions([]); setPage(1); }}
+                  className="px-3 py-1.5 text-xs font-medium rounded-full border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
           <div>
             <label className="block font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">

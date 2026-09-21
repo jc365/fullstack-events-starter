@@ -37,7 +37,9 @@ export default class PrismaBitacoraRepository implements IBitacoraRepository {
     if (options.userId) {
       where.userId = options.userId;
     }
-    if (options.action) {
+    if (options.actions && options.actions.length > 0) {
+      where.action = { in: options.actions };
+    } else if (options.action) {
       where.action = options.action;
     }
     if (options.entityType) {

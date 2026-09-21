@@ -656,7 +656,8 @@ router.get('/admin/bitacora', adminMiddleware, async (req, res) => {
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
     const userId = req.query.userId as string | undefined;
-    const action = req.query.action as string | undefined;
+    const actionRaw = req.query.action as string | undefined;
+    const actions = actionRaw ? actionRaw.split(',').map((a) => a.trim()).filter(Boolean) : undefined;
     const entityType = req.query.entityType as string | undefined;
     const since = req.query.since as string | undefined;
     const until = req.query.until as string | undefined;
@@ -665,7 +666,7 @@ router.get('/admin/bitacora', adminMiddleware, async (req, res) => {
       page,
       limit,
       userId,
-      action,
+      actions,
       entityType,
       since,
       until,

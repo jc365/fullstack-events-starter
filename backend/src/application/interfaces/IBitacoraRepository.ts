@@ -24,6 +24,7 @@ export interface BitacoraQueryOptions {
   limit?: number;
   userId?: string;
   action?: string;
+  actions?: string[];
   entityType?: string;
   since?: string;
   until?: string;
