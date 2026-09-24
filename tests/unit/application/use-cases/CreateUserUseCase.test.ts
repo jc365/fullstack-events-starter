@@ -102,7 +102,7 @@ describe('CreateUserUseCase', () => {
     expect(bitacoraService.log).toHaveBeenCalledWith({
       userId: 'usr-1',
       action: 'create_user',
-      details: { email: 'jane@test.com', name: 'Jane Doe' },
+      metadata: { email: 'jane@test.com', name: 'Jane Doe' },
     });
   });
 });

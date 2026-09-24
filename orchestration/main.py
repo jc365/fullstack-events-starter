@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from orchestration.config import WEBHOOK_HOST, WEBHOOK_PORT, LOG_LEVEL
+from orchestration.config import WEBHOOK_HOST, WEBHOOK_PORT, LOG_LEVEL, ORCH_RELOAD
 
 
 def main():
@@ -31,7 +31,7 @@ def main():
         "orchestration.webhooks.server:app",
         host=WEBHOOK_HOST,
         port=WEBHOOK_PORT,
-        reload=False,
+        reload=ORCH_RELOAD,
         log_level=LOG_LEVEL.lower(),
     )
 

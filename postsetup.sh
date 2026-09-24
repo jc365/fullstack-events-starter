@@ -50,11 +50,13 @@ run() {
 }
 
 # ── Detect project name ───────────────────────────────────────────────────────
-if [[ -f .setup_done ]]; then
-  PROJECT_NAME=$(cat .setup_done)
-else
+# Source of truth: package.json "name" (set by setup.sh). Fallback: directory name.
+if [[ -f package.json ]]; then
+  PROJECT_NAME=$(grep -oE '"name": *"[^"]+"' package.json | head -1 | sed -E 's/.*"name": *"([^"]+)".*/\1/' || true)
+fi
+if [[ -z "${PROJECT_NAME:-}" || "$PROJECT_NAME" == *"{{"* ]]; then
   PROJECT_NAME=$(basename "$PWD")
-  warn ".setup_done not found; using directory name: $PROJECT_NAME"
+  warn "package.json name not set; using directory name: $PROJECT_NAME"
 fi
 
 CONTAINER_NAME="${PROJECT_NAME}-db"

@@ -34,8 +34,8 @@ export default function App() {
     <ThemeProvider>
       <ToastProvider>
         <UserCacheProvider>
-          <ConfigProvider>
-            <UserProvider>
+          <UserProvider>
+            <ConfigProvider>
               <BrowserRouter>
                 <Routes>
                   <Route path="/login" element={<Navigate to="/dashboard" replace />} />
@@ -54,8 +54,8 @@ export default function App() {
                   </Route>
                 </Routes>
               </BrowserRouter>
-            </UserProvider>
-          </ConfigProvider>
+            </ConfigProvider>
+          </UserProvider>
         </UserCacheProvider>
       </ToastProvider>
     </ThemeProvider>

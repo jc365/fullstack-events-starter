@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import client from '../api/client';
 import { setLogLevel } from '../utils/logger';
+import { useUser } from './UserContext';
 
 interface Config {
   id: string;
@@ -26,6 +27,7 @@ interface ConfigContextValue {
 const ConfigContext = createContext<ConfigContextValue | null>(null);
 
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useUser();
   const [configs, setConfigs] = useState<Config[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +56,16 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!user?.id) {
+      setConfigs([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     fetchConfigs();
     const id = setInterval(fetchConfigs, 30_000);
     return () => clearInterval(id);
-  }, [fetchConfigs]);
+  }, [user?.id, fetchConfigs]);
 
   const getConfig = useCallback(
     (key: string) => configs.find((c) => c.key === key),

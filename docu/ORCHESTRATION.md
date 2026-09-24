@@ -19,6 +19,7 @@ python -m orchestration.main
 | Event Type | Workflow | Payload | Description |
 |-----------|----------|---------|-------------|
 | `item.created` | `FileProcessorWorkflow` | `{ item_id, file_url, mime_type }` | Processes uploaded files. For video files: extracts metadata (ffprobe) and generates thumbnail (ffmpeg). Non-video files skipped. |
+| `file_uploaded` | `FileUploadedWorkflow` | `{ item_id, file_key, uploaded_at, size, mimetype }` | Acknowledges a file upload from the backend (`UploadItemFileUseCase`). Minimal workflow — logs and returns OK. |
 | `item.reviewed` | `NotificationWorkflow` | `{ item_id, user_id, score, feedback }` | Sends notification email to user when their item is reviewed. |
 | `cleanup.daily` | `CleanupWorkflow` | `{ max_age_days? }` | Deletes files older than N days from uploads and thumbnails directories. |
 | `r2.monitor` | `R2MonitorWorkflow` | `{}` | Monitors Cloudflare R2 bucket size, sends alert email if threshold exceeded. |

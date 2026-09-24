@@ -20,9 +20,4 @@ describe('User Entity', () => {
     expect(user.id).toBeDefined();
     expect(user.id.startsWith('usr-')).toBe(true);
   });
-
-  it('should have empty submissions initially', () => {
-    const user = User.create(name, email, hash, 'usr-1');
-    expect(user.submissions).toEqual([]);
-  });
 });

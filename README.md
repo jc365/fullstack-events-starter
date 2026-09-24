@@ -26,7 +26,7 @@ Reusable fullstack starter kit with Node/Express backend, React frontend, and Py
 # 1. Clone and rename
 git clone https://github.com/jc365/fullstack-events-starter.git my-project
 cd my-project
-./setup.sh my-project
+./setup.sh my-project    # first-time setup: asks for 4 service ports (defaults: 3000/5173/8080/5433)
 
 # 2. Install deps, start PostgreSQL, seed
 ./postsetup.sh
@@ -41,10 +41,32 @@ npm run dev:all
 
 > Uses `prisma db push` (no migration files). See [docu/MIGRATIONS.md](docu/MIGRATIONS.md) for versioned migrations.
 
+### Puertos y setup
+
+`setup.sh` pregunta 4 puertos en la primera configuración (backend,
+frontend, orchestrator, PostgreSQL) y los escribe literalmente en todos
+los configs.
+
+| Comando | Qué hace |
+|---------|----------|
+| `./setup.sh mi-proyecto` | Primera configuración: renombra el proyecto y pregunta los 4 puertos |
+| `./setup.sh --ports` | Cambiar los puertos después (sin renombrar) |
+| `./setup.sh mi-proyecto --force` | Ejecutar en el repo original del starter (solo para desarrollo del starter) |
+
+> ⚠️ **No ejecutes `setup.sh` en el repo del starter original**
+> (`fullstack-events-starter`). Está pensado para clones derivados;
+> sin `--force` el script se niega a ejecutarse ahí.
+
+Variables del orquestador en `orchestration/.env`:
+
+- `ORCHESTRATOR_PORT` — puerto del servidor uvicorn (default `8080`)
+- `ORCH_RELOAD` — hot-reload de uvicorn en dev (default `true`)
+
 ### Useful Commands
 
 | Command | Description |
 |---------|-------------|
+| `./setup.sh --ports` | Cambiar los 4 puertos de servicio |
 | `./postsetup.sh` | Install deps, start PostgreSQL, seed |
 | `npm run dev:all` | Start DB + Backend + Frontend + Orchestrator |
 | `npm run db:up` | Start PostgreSQL (Docker) |
@@ -54,7 +76,7 @@ npm run dev:all
 | `npm run db:restore` | Restore backup |
 | `npm run db:studio` | Open Prisma Studio |
 
-> PostgreSQL runs on port `5433` (host) / `5432` (container) to avoid conflicts.
+> Default ports: backend `3000`, frontend `5173`, orchestrator `8080`, PostgreSQL `5433` (host) / `5432` (container). Cambia `./setup.sh --ports`.
 
 ## Project Structure
 
@@ -62,11 +84,11 @@ npm run dev:all
 fullstack-events-starter/
 ├── backend/                  # Express 5 + Prisma + TypeScript
 │   ├── prisma/               # Schema, seed, backups
-│   ├── src/
-│   │   ├── domain/           # Entities, value objects, interfaces
-│   │   ├── application/      # Use cases (commands, queries)
-│   │   └── infrastructure/   # Repositories, API, storage, email
-│   └── tests/                # Unit + integration tests
+│   ├── scripts/              # backup-pg.ts, restore-pg.ts
+│   └── src/
+│       ├── domain/           # Entities, value objects, interfaces
+│       ├── application/      # Use cases (commands, queries)
+│       └── infrastructure/   # Repositories, API, storage, email
 ├── frontend/                 # React + Vite + Tailwind
 │   ├── src/
 │   │   ├── components/       # UI components (Layout, Modals, etc.)
@@ -75,10 +97,11 @@ fullstack-events-starter/
 │   │   └── utils/            # scoring.ts, status.ts
 │   └── tests/e2e/            # Playwright E2E tests
 ├── orchestration/            # Python + FastAPI
-│   ├── webhooks/             # FastAPI server (port 8080)
+│   ├── webhooks/             # FastAPI server (default port 8080)
 │   ├── workflows/            # Event-driven workflows
 │   ├── utils/                # Email client, backend client
 │   └── tests/                # pytest tests
+├── tests/                    # Backend unit + integration tests (vitest)
 ├── .agents/skills/           # AI agent skills (versioned)
 ├── docu/                     # Architecture docs, findings, migrations
 └── docs/                     # Diagrams, Cloudflare worker

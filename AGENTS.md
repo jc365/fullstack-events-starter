@@ -29,11 +29,10 @@ fullstack-events-starter/
 ├── backend/                  # Express 5 + Prisma + TypeScript
 │   ├── prisma/               # Schema, seed, backups
 │   ├── scripts/              # backup-pg.ts, restore-pg.ts
-│   ├── src/
-│   │   ├── domain/           # Entities, value objects, interfaces
-│   │   ├── application/      # Use cases (commands, queries)
-│   │   └── infrastructure/   # Repositories, API, storage, email
-│   └── tests/                # Unit + integration tests
+│   └── src/
+│       ├── domain/           # Entities, value objects, interfaces
+│       ├── application/      # Use cases (commands, queries)
+│       └── infrastructure/   # Repositories, API, storage, email
 ├── frontend/                 # React + Vite + Tailwind
 │   ├── src/
 │   │   ├── components/       # UI components (Layout, Modals, etc.)
@@ -42,10 +41,11 @@ fullstack-events-starter/
 │   │   └── utils/            # scoring.ts, status.ts
 │   └── tests/e2e/            # Playwright E2E tests
 ├── orchestration/            # Python + FastAPI
-│   ├── webhooks/             # FastAPI server (port 8080)
+│   ├── webhooks/             # FastAPI server (default port 8080)
 │   ├── workflows/            # Event-driven workflows
 │   ├── utils/                # Email client, backend client
 │   └── tests/                # pytest unit + integration tests
+├── tests/                    # Backend unit + integration tests (vitest)
 ├── .agents/skills/           # AI agent skills (versioned)
 ├── docu/                     # Architecture docs, findings, migrations
 └── docs/                     # Diagrams, Cloudflare worker
@@ -56,10 +56,14 @@ fullstack-events-starter/
 See [README.md](README.md#quick-start) for full setup instructions.
 
 ```bash
-./setup.sh my-project        # Rename project
+./setup.sh my-project        # First setup: rename + prompts for 4 ports
+./setup.sh --ports           # Change the 4 service ports later
 ./postsetup.sh               # Install deps, start PostgreSQL, seed
 npm run dev:all              # Start all services
 ```
+
+> No ejecutes `setup.sh` en el repo original del starter sin `--force`
+> (ver README § Puertos y setup).
 
 ## Key Decisions
 
@@ -69,7 +73,7 @@ npm run dev:all              # Start all services
 - **IDs are flat strings** with prefixes (`user-...`, `item-...`)
 - **Bitácora** — non-blocking audit log (never throws)
 - **DEMO_MODE** — allows passwordless login via sidebar for demo purposes
-- **Port 5433** (host) / 5432 (container) to avoid conflicts
+- **Ports** — defaults: backend `3000`, frontend `5173`, orchestrator `8080`, PostgreSQL `5433` (host) / `5432` (container); configurable via `./setup.sh` / `./setup.sh --ports`
 
 ## Roles
 
@@ -178,16 +182,16 @@ See [docu/ORCHESTRATION.md](docu/ORCHESTRATION.md) for full documentation.
 
 ## Typecheck
 
-Backend tsc has pre-existing errors (~128: TS2835, TS7006, TS2349). This is accepted debt — `tsx` runtime resolves them. See [docu/FINDINGS.md](docu/FINDINGS.md) for details.
+Backend and frontend pass `tsc` with 0 errors.
 
 ```bash
-cd backend && npx tsc --noEmit 2>&1 | wc -l
-# Baseline: ~127 errors. Goal: reduce over time.
+cd backend && npx tsc --noEmit   # 0 errors
+cd frontend && npx tsc -b        # 0 errors
 ```
 
 ## Testing
 
-- Backend: `tests/unit/` (VO, entities, use cases)
+- Backend: `tests/` at repo root — `tests/unit/` (VO, entities, use cases) + `tests/integration/`
 - Frontend: `frontend/src/**/*.test.tsx` (co-located)
 - E2E: `frontend/tests/e2e/*.spec.ts`
 - Orchestrator: `orchestration/tests/` (pytest, all mocked)
@@ -199,7 +203,7 @@ cd backend && npx tsc --noEmit 2>&1 | wc -l
 - `.env` in `.gitignore`
 - CORS configurable via `CORS_ORIGIN` (comma-separated)
 - Helmet + HSTS in production
-- Rate limiting: login 10 req/15min, API 100 req/15min
+- Rate limiting: login 10 req/15min (prod) / 100 (dev), API 1000 req/15min
 - Service tokens via `ADMIT_TOKENS` env var
 
 ## Additional Documentation
@@ -207,7 +211,7 @@ cd backend && npx tsc --noEmit 2>&1 | wc -l
 - [README.md](README.md) — Quick start, features, project structure
 - [docu/GUIDE.md](docu/GUIDE.md) — Clean Architecture reference
 - [docu/ORCHESTRATION.md](docu/ORCHESTRATION.md) — Orchestrator event types, payloads, workflows
-- [docu/FINDINGS.md](docu/FINDINGS.md) — Known debt, decisions, and resolved items
+- [docu/FINDINGS.md](docu/FINDINGS.md) — Known debt and architectural decisions
 - [docu/MIGRATIONS.md](docu/MIGRATIONS.md) — Prisma migration strategy
 - [docs/diagrams/](docs/diagrams/) — Flow diagrams
 - [docs/cloudflare-worker.js](docs/cloudflare-worker.js) — Keep-alive cron worker

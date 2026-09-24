@@ -482,7 +482,7 @@ router.get('/config/:key', async (req, res) => {
   }
 });
 
-router.put('/config/:key', async (req: AuthRequest, res) => {
+router.put('/config/:key', adminMiddleware, async (req: AuthRequest, res) => {
   const { key } = req.params as { key: string };
   requestLogger.info({ key }, 'PUT /config/:key');
   try {
@@ -515,7 +515,7 @@ router.put('/config/:key', async (req: AuthRequest, res) => {
   }
 });
 
-router.patch('/config/:key', async (req: AuthRequest, res) => {
+router.patch('/config/:key', adminMiddleware, async (req: AuthRequest, res) => {
   const { key } = req.params as { key: string };
   requestLogger.info({ key }, 'PATCH /config/:key');
   try {
@@ -549,7 +549,7 @@ router.patch('/config/:key', async (req: AuthRequest, res) => {
   }
 });
 
-router.delete('/config/:key', async (req: AuthRequest, res) => {
+router.delete('/config/:key', adminMiddleware, async (req: AuthRequest, res) => {
   const { key } = req.params as { key: string };
   requestLogger.info({ key }, 'DELETE /config/:key');
   try {

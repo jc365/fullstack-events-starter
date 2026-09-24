@@ -10,10 +10,6 @@ import { generateToken } from '../../../../backend/src/infrastructure/middleware
 
 beforeEach(async () => {
   await prisma.bitacora.deleteMany();
-  await prisma.participant.deleteMany();
-  await prisma.submission.deleteMany();
-  await prisma.round.deleteMany();
-  await prisma.casting.deleteMany();
   await prisma.user.deleteMany();
 });
 

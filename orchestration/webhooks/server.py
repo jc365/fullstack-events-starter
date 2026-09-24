@@ -27,6 +27,7 @@ from pydantic import BaseModel
 
 from orchestration.workflows.base import Event, WorkflowResult
 from orchestration.workflows.file_processor import FileProcessorWorkflow
+from orchestration.workflows.file_uploaded import FileUploadedWorkflow
 from orchestration.workflows.cleanup import CleanupWorkflow
 from orchestration.workflows.notifications import NotificationWorkflow
 from orchestration.workflows.r2_monitor import R2MonitorWorkflow
@@ -43,6 +44,7 @@ BACKEND_WAIT_INTERVAL = 1  # seconds
 
 WORKFLOWS = {
     "item.created": FileProcessorWorkflow(),
+    "file_uploaded": FileUploadedWorkflow(),
     "cleanup.daily": CleanupWorkflow(),
     "item.reviewed": NotificationWorkflow(),
     "r2.monitor": R2MonitorWorkflow(),

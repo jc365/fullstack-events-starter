@@ -8,6 +8,7 @@ import IItemRepository from '../../interfaces/IItemRepository';
 import logger from '../../../infrastructure/logging/requestContext';
 import BitacoraService from '../../../infrastructure/logging/BitacoraService';
 import { uploadFile, deleteFile } from '../../../infrastructure/storage/storageService';
+import { dispatchEvent } from '../../../infrastructure/webhooks/webhookClient';
 
 interface UploadItemFileInput {
   buffer: Buffer;
@@ -55,6 +56,14 @@ export default class UploadItemFileUseCase {
       entityType: 'item',
       entityId: itemId,
       metadata: { fileKey: key, mimetype: file.mimetype, size: file.size },
+    });
+
+    await dispatchEvent('file_uploaded', {
+      item_id: itemId,
+      file_key: key,
+      uploaded_at: new Date().toISOString(),
+      size: file.size,
+      mimetype: file.mimetype,
     });
 
     logger.info({ itemId, key }, 'UploadItemFileUseCase: completed');

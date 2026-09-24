@@ -24,7 +24,8 @@ THUMBNAILS_DIR = UPLOADS_DIR.parent / "thumbnails"
 THUMBNAILS_DIR.mkdir(parents=True, exist_ok=True)
 
 WEBHOOK_HOST = os.getenv("ORCHESTRATION_HOST", "0.0.0.0")
-WEBHOOK_PORT = int(os.getenv("ORCHESTRATION_PORT", "8080"))
+WEBHOOK_PORT = int(os.getenv("ORCHESTRATOR_PORT", "8080"))
+ORCH_RELOAD = os.getenv("ORCH_RELOAD", "true").lower() in ("1", "true", "yes")
 
 CLEANUP_MAX_AGE_DAYS = int(os.getenv("CLEANUP_MAX_AGE_DAYS", "7"))
 
