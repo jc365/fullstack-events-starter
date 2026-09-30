@@ -9,6 +9,7 @@ import IItemRepository from '../../interfaces/IItemRepository';
 import { UpdateItemInput } from '../../dtos';
 import logger from '../../../infrastructure/logging/requestContext';
 import BitacoraService from '../../../infrastructure/logging/BitacoraService';
+import { NotFoundError, ValidationError, ITEM_NOT_FOUND } from '../../../infrastructure/errors';
 
 export default class UpdateItemUseCase {
   constructor(
@@ -21,13 +22,17 @@ export default class UpdateItemUseCase {
 
     const existing = await this.itemRepository.findById(id);
     if (!existing) {
-      throw new Error('Item not found');
+      throw new NotFoundError('Item not found', ITEM_NOT_FOUND);
     }
 
     const updates: { title?: ItemTitle; description?: string | null; status?: ItemStatus } = {};
 
     if (input.title !== undefined) {
-      updates.title = ItemTitle.create(input.title);
+      try {
+        updates.title = ItemTitle.create(input.title);
+      } catch (err) {
+        throw new ValidationError(err instanceof Error ? err.message : 'Invalid item title');
+      }
     }
     if (input.description !== undefined) {
       updates.description = input.description;

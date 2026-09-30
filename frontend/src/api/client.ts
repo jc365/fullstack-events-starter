@@ -115,6 +115,22 @@ client.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Normaliza el envelope global de errores `{ error: { code, message } }`
+    // (S8): `data.error` → string, y se copia a `error.message` para que
+    // los componentes que leen `err.message` muestren el mensaje real.
+    const data = error?.response?.data;
+    if (data && typeof data === 'object' && 'error' in data && data.error) {
+      const raw = data.error;
+      const message = typeof raw === 'string'
+        ? raw
+        : typeof raw?.message === 'string'
+          ? raw.message
+          : null;
+      if (message !== null) {
+        data.error = message;
+        error.message = message;
+      }
+    }
     return Promise.reject(error);
   }
 );

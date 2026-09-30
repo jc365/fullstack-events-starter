@@ -14,6 +14,7 @@ import logger from './infrastructure/logging/logger';
 import { startLogLevelSync } from './infrastructure/logging/logger';
 import { requestContextMiddleware, getRequestId } from './infrastructure/logging/requestContext';
 import v1Router from './infrastructure/api/v1/routes';
+import { errorHandler, NotFoundError } from './infrastructure/errors';
 import { startAutoReload } from './infrastructure/config/config';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -83,6 +84,14 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/v1', v1Router);
+
+// Ruta desconocida → envelope de error (en vez del 404 HTML de Express)
+app.use((req, _res, next) => {
+  next(new NotFoundError(`Route ${req.method} ${req.originalUrl} not found`));
+});
+
+// Handler global de errores — SIEMPRE al final, tras todas las rutas
+app.use(errorHandler);
 
 export default app;
 

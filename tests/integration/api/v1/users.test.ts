@@ -48,7 +48,7 @@ describe('POST /api/v1/users', () => {
     expect(res.body.email).toBe('test@test.com');
   });
 
-  it('should return 400 when email is already registered', async () => {
+  it('should return 409 when email is already registered', async () => {
     await prisma.user.create({
       data: { id: 'usr-existing', name: 'Existing', email: 'test@test.com', password: 'hash' },
     });
@@ -62,8 +62,9 @@ describe('POST /api/v1/users', () => {
         password: 'secret123',
       });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain('already registered');
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('USER_EMAIL_EXISTS');
+    expect(res.body.error.message).toContain('already registered');
   });
 
   it('should return 400 when name is empty', async () => {
@@ -77,7 +78,8 @@ describe('POST /api/v1/users', () => {
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.message).toBe('Name cannot be empty');
   });
 });
 

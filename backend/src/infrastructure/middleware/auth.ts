@@ -5,6 +5,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { UnauthorizedError, AUTH_INVALID_TOKEN } from '../errors';
 
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
@@ -28,7 +29,7 @@ export interface AuthRequest extends Request {
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Unauthorized' });
+    next(new UnauthorizedError('Unauthorized'));
     return;
   }
 
@@ -45,7 +46,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     req.user = { id: decoded.userId };
     next();
   } catch {
-    res.status(401).json({ error: 'Invalid token' });
+    next(new UnauthorizedError('Invalid token', AUTH_INVALID_TOKEN));
   }
 }
 

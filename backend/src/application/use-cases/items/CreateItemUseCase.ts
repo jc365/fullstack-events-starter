@@ -9,6 +9,7 @@ import IItemRepository from '../../interfaces/IItemRepository';
 import { CreateItemInput } from '../../dtos';
 import logger from '../../../infrastructure/logging/requestContext';
 import BitacoraService from '../../../infrastructure/logging/BitacoraService';
+import { ValidationError } from '../../../infrastructure/errors';
 
 export default class CreateItemUseCase {
   constructor(
@@ -21,7 +22,12 @@ export default class CreateItemUseCase {
 
     logger.info({ title, createdBy }, 'CreateItemUseCase: starting');
 
-    const itemTitle = ItemTitle.create(title);
+    let itemTitle: ItemTitle;
+    try {
+      itemTitle = ItemTitle.create(title);
+    } catch (err) {
+      throw new ValidationError(err instanceof Error ? err.message : 'Invalid item title');
+    }
     const item = Item.create(itemTitle, description ?? null, createdBy);
 
     await this.itemRepository.save(item);

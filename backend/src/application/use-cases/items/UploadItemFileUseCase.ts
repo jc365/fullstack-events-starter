@@ -9,6 +9,12 @@ import logger from '../../../infrastructure/logging/requestContext';
 import BitacoraService from '../../../infrastructure/logging/BitacoraService';
 import { uploadFile, deleteFile } from '../../../infrastructure/storage/storageService';
 import { dispatchEvent } from '../../../infrastructure/webhooks/webhookClient';
+import {
+  NotFoundError,
+  InternalError,
+  ITEM_NOT_FOUND,
+  ITEM_UPLOAD_FAILED,
+} from '../../../infrastructure/errors';
 
 interface UploadItemFileInput {
   buffer: Buffer;
@@ -32,7 +38,7 @@ export default class UploadItemFileUseCase {
 
     const item = await this.itemRepository.findById(itemId);
     if (!item) {
-      throw new Error('Item not found');
+      throw new NotFoundError('Item not found', ITEM_NOT_FOUND);
     }
 
     // Borrar el fichero anterior si existía
@@ -45,7 +51,12 @@ export default class UploadItemFileUseCase {
     }
 
     const key = `items/${itemId}/${Date.now()}-${sanitizeFilename(file.originalname)}`;
-    await uploadFile(key, file.buffer, file.mimetype);
+    try {
+      await uploadFile(key, file.buffer, file.mimetype);
+    } catch (err) {
+      logger.error({ itemId, key, err }, 'UploadItemFileUseCase: storage upload failed');
+      throw new InternalError('Item file upload failed', ITEM_UPLOAD_FAILED);
+    }
 
     const updated = item.withUpdates({ fileKey: key, mimeType: file.mimetype });
     await this.itemRepository.save(updated);

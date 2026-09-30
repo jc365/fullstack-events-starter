@@ -6,6 +6,7 @@
 import IItemRepository from '../../interfaces/IItemRepository';
 import logger from '../../../infrastructure/logging/requestContext';
 import BitacoraService from '../../../infrastructure/logging/BitacoraService';
+import { NotFoundError, ITEM_NOT_FOUND } from '../../../infrastructure/errors';
 
 export default class DeleteItemUseCase {
   constructor(
@@ -18,7 +19,7 @@ export default class DeleteItemUseCase {
 
     const existing = await this.itemRepository.findById(id);
     if (!existing) {
-      throw new Error('Item not found');
+      throw new NotFoundError('Item not found', ITEM_NOT_FOUND);
     }
 
     await this.itemRepository.delete(id);

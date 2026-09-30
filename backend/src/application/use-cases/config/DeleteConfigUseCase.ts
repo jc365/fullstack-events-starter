@@ -6,6 +6,7 @@
 import IConfigRepository from '../../interfaces/IConfigRepository';
 import logger from '../../../infrastructure/logging/requestContext';
 import BitacoraService from '../../../infrastructure/logging/BitacoraService';
+import { NotFoundError, CONFIG_NOT_FOUND } from '../../../infrastructure/errors';
 
 export class DeleteConfigUseCase {
   constructor(
@@ -18,7 +19,7 @@ export class DeleteConfigUseCase {
 
     const existing = await this.configRepository.findByKey(key);
     if (!existing) {
-      throw new Error(`Config "${key}" not found`);
+      throw new NotFoundError(`Config "${key}" not found`, CONFIG_NOT_FOUND);
     }
 
     await this.configRepository.delete(key);

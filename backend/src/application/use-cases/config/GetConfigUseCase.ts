@@ -5,6 +5,7 @@
 
 import IConfigRepository from '../../interfaces/IConfigRepository';
 import logger from '../../../infrastructure/logging/requestContext';
+import { NotFoundError, CONFIG_NOT_FOUND } from '../../../infrastructure/errors';
 
 export class GetConfigUseCase {
   constructor(private readonly configRepository: IConfigRepository) {}
@@ -13,6 +14,9 @@ export class GetConfigUseCase {
     logger.info({ key }, 'GetConfigUseCase: starting');
     const config = await this.configRepository.findByKey(key);
     logger.info({ key, found: !!config }, 'GetConfigUseCase: completed');
+    if (!config) {
+      throw new NotFoundError(`Config "${key}" not found`, CONFIG_NOT_FOUND);
+    }
     return config;
   }
 }

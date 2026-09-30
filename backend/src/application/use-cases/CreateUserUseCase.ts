@@ -12,6 +12,11 @@ import { CreateUserInput } from '../dtos';
 import logger from '../../infrastructure/logging/requestContext';
 import BitacoraService from '../../infrastructure/logging/BitacoraService';
 import HashService from '../../infrastructure/security/HashService';
+import {
+  ConflictError,
+  ValidationError,
+  USER_EMAIL_EXISTS,
+} from '../../infrastructure/errors';
 
 export class CreateUserUseCase {
   constructor(
@@ -28,11 +33,22 @@ export class CreateUserUseCase {
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
       logger.error({ email }, 'CreateUserUseCase: email already registered');
-      throw new Error(`Email ${email} is already registered`);
+      throw new ConflictError(`Email ${email} is already registered`, USER_EMAIL_EXISTS);
     }
 
-    const userEmail = Email.create(email);
-    const userName = FullName.create(name);
+    if (!password) {
+      throw new ValidationError('Password is required');
+    }
+
+    let userEmail: Email;
+    let userName: FullName;
+    try {
+      userEmail = Email.create(email);
+      userName = FullName.create(name);
+    } catch (err) {
+      throw new ValidationError(err instanceof Error ? err.message : 'Invalid user data');
+    }
+
     const hashedPassword = await this.hashService.hash(password);
     const user = User.create(userName, userEmail, hashedPassword, id);
 
